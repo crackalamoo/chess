@@ -1,6 +1,5 @@
 import ctypes
 
-piece_side = [0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1]
 DEFAULT_BOARD = [[10,8, 9, 11,12,9, 8,10],
                 [7, 7, 7, 7, 7, 7, 7, 7],
                 [0, 0, 0, 0, 0, 0, 0, 0],
@@ -71,7 +70,13 @@ cpp_afterMove.restype = GameState
 cpp_validMove = chessFuncs.validMove
 cpp_validMove.restype = ctypes.c_bool
 cpp_inCheck = chessFuncs.inCheck
-cpp_inCheck.resype = ctypes.c_bool
+cpp_inCheck.restype = ctypes.c_bool
+cpp_minimax = chessFuncs.minimax
+cpp_minimax.restype = ctypes.c_int
+cpp_showMoves = chessFuncs.showMoves
+cpp_showMoves.restype = ctypes.c_int
+cpp_gameRes = chessFuncs.gameRes
+cpp_gameRes.restype = ctypes.c_int
 
 
 def afterMove(b, mp, start, end):
@@ -84,3 +89,13 @@ def validMove(b, mp, start, end, turn, useCheck=True):
 def inCheck(b, mp, turn):
     state = cppState(b, mp)
     return cpp_inCheck(state, ctypes.c_int(turn))
+def gameRes(b, mp, turn):
+    state = cppState(b, mp)
+    return cpp_gameRes(state, ctypes.c_int(turn))
+def minimax(b, mp, turn, depth):
+    state = cppState(b, mp)
+    res = cpp_minimax(state, ctypes.c_int(turn), ctypes.c_int(depth))
+    return ((int(res/1000),int((res%1000)/100)), (int((res%100)/10), int(res%10)))
+def showMoves(b, mp, turn):
+    state = cppState(b, mp)
+    cpp_showMoves(state, ctypes.c_int(turn))
