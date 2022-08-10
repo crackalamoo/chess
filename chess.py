@@ -8,14 +8,17 @@ DEFAULT_BOARD = [[10,8, 9, 11,12,9, 8,10],
                 [0, 0, 0, 0, 0, 0, 0, 0],
                 [1, 1, 1, 1, 1, 1, 1, 1],
                 [4, 2, 3, 5, 6, 3, 2, 4]]
+for i in range(8):
+    for j in range(8):
+        DEFAULT_BOARD[i][j] = bytes([DEFAULT_BOARD[i][j]])
 
 
 class GameState(ctypes.Structure):
-    _fields_ = [("board", (ctypes.c_int*8)*8), ("moved", (ctypes.c_int*8)*8), ("lastMoved", ctypes.c_int*2)]
+    _fields_ = [("board", (ctypes.c_char*8)*8), ("moved", (ctypes.c_bool*8)*8), ("lastMoved", ctypes.c_int*2)]
 
 def cppBoard(b):
     input_board = []
-    cpp_row = ctypes.c_int*8
+    cpp_row = ctypes.c_char*8
     cpp_board = cpp_row*8
     for i in range(8):
         input_board.append(cpp_row(*b[i]))
@@ -26,14 +29,17 @@ def cppSquare(s):
     return cpp_square(*s)
 def cppMoved(mp):
     mp_board = []
+    cpp_row = ctypes.c_bool*8
     for i in range(8):
-        mp_board.append([])
+        row = []
         for j in range(8):
             if (i,j) in mp:
-                mp_board[i].append(1)
+                row.append(1)
             else:
-                mp_board[i].append(0)
-    return cppBoard(mp_board)
+                row.append(0)
+        mp_board.append(cpp_row(*row))
+    mp_board = (cpp_row*8)(*mp_board)
+    return mp_board
 def cppState(b, mp):
     state = GameState()
     state.board = cppBoard(b)
@@ -77,11 +83,12 @@ cpp_showMoves = chessFuncs.showMoves
 cpp_showMoves.restype = ctypes.c_int
 cpp_gameRes = chessFuncs.gameRes
 cpp_gameRes.restype = ctypes.c_int
+cpp_setCalc = chessFuncs.set_calc_time
 
 
-def afterMove(b, mp, start, end):
+def afterMove(b, mp, start, end, promotion=5):
     oldState = cppState(b, mp)
-    newState = cpp_afterMove(oldState, cppSquare(start), cppSquare(end))
+    newState = cpp_afterMove(oldState, cppSquare(start), cppSquare(end), ctypes.c_int(promotion))
     return (pythonBoard(newState), pythonMoved(newState))
 def validMove(b, mp, start, end, turn, useCheck=True):
     state = cppState(b, mp)
@@ -92,10 +99,11 @@ def inCheck(b, mp, turn):
 def gameRes(b, mp, turn):
     state = cppState(b, mp)
     return cpp_gameRes(state, ctypes.c_int(turn))
-def minimax(b, mp, turn, depth):
+def minimax(b, mp, turn, depth, time):
+    cpp_setCalc(time)
     state = cppState(b, mp)
     res = cpp_minimax(state, ctypes.c_int(turn), ctypes.c_int(depth))
-    return ((int(res/1000),int((res%1000)/100)), (int((res%100)/10), int(res%10)))
+    return ((int((res%10000)/1000),int((res%1000)/100)), (int((res%100)/10), int(res%10)), int(res/10000))
 def showMoves(b, mp, turn):
     state = cppState(b, mp)
     cpp_showMoves(state, ctypes.c_int(turn))

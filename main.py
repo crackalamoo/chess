@@ -7,9 +7,9 @@ piece_icons = ['[ ]', u'[\N{WHITE CHESS PAWN}]', u'[\N{WHITE CHESS KNIGHT}]', u'
     u'[\N{BLACK CHESS PAWN}]', u'[\N{BLACK CHESS KNIGHT}]', u'[\N{BLACK CHESS BISHOP}]', u'[\N{BLACK CHESS ROOK}]', u'[\N{BLACK CHESS QUEEN}]', u'[\N{BLACK CHESS KING}]']
 movedPieces = []
 board = DEFAULT_BOARD
-FLIP_BOARD = False
 toPlay = 1
 players = {1: 1, -1: 1}
+FLIP_BOARD = (players[1] == 0 and players[-1] == 0)
 
 def displayBoard(b, turn, flip=False):
     os.system('clear')
@@ -18,14 +18,14 @@ def displayBoard(b, turn, flip=False):
         for i in range(len(b)-1, -1, -1):
             s = "  " + str(int(8-i)) + " "
             for j in range(len(b[i])-1, -1, -1):
-                s += piece_icons[b[i][j]]
+                s += piece_icons[ord(b[i][j])]
             print(s)
         print("     h  g  f  e  d  c  b  a")
     else:
         for i in range(len(b)):
             s = "  " + str(int(8-i)) + " "
             for j in range(len(b[i])):
-                s += piece_icons[b[i][j]]
+                s += piece_icons[ord(b[i][j])]
             print(s)
         print("     a  b  c  d  e  f  g  h")
     res = gameRes(board, movedPieces, turn)
@@ -39,12 +39,12 @@ def displayBoard(b, turn, flip=False):
     return res
 
 
-def makeMove(start, end):
+def makeMove(start, end, promotion=5):
     global toPlay
     global board
     global movedPieces
     if validMove(board, movedPieces, start, end, toPlay):
-        madeMove = afterMove(board, movedPieces, start, end)
+        madeMove = afterMove(board, movedPieces, start, end, promotion)
         board = madeMove[0]
         movedPieces = madeMove[1]
         toPlay *= -1
@@ -54,6 +54,7 @@ def makeMove(start, end):
 
 
 def inputMove(source):
+    print({1: "White", -1: "Black"}[toPlay] + " to play")
     if source == 0:
         myMove = []
         while not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
@@ -64,11 +65,19 @@ def inputMove(source):
                 print("Invalid move")
                 if len(inputStr) > 0 and inputStr[0] == '/':
                     print(eval(input("Command: ")))
-        makeMove(myMove[0], myMove[1])
+        promotion = 5
+        if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+            promotion = 0
+            while not (2 <= promotion <= 5):
+                try:
+                    promotion = {"N": 2, "B": 3, "R": 4, "Q": 5}[input("N/B/R/Q: ").upper()]
+                except KeyError:
+                    print("Invalid promotion")
+        makeMove(myMove[0], myMove[1], promotion)
     if source == 1:
         print("Thinking...")
-        myMove = minimax(board, movedPieces, toPlay, 3)
-        makeMove(myMove[0], myMove[1])
+        myMove = minimax(board, movedPieces, toPlay, 3, 7500)
+        makeMove(myMove[0], myMove[1], myMove[2])
 def tupleMove(m):
     if not len(m) == 2 or not len(m[0]) == 2 or not len(m[1]) == 2:
         return ()
