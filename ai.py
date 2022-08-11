@@ -2,5 +2,6 @@
 import numpy as np
 import chess
 
-def minimax_ai(b, mp, turn, depth):
-    return chess.minimax(b, mp, turn, depth, 20000, True)
+def minimax_ai(b, mp, turn):
+    #return chess.minimax(b, mp, turn, 2, {-1: 7500, 1: 7500}[turn], True)
+    return chess.minimax(b, mp, turn, 2, 7500, True)

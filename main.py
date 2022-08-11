@@ -8,12 +8,13 @@ piece_icons = ['[ ]', u'[\N{WHITE CHESS PAWN}]', u'[\N{WHITE CHESS KNIGHT}]', u'
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 0, -1: 1}
+players = {1: 1, -1: 1}
 FLIP_BOARD = (players[1] == 0 and players[-1] == 0)
 
 fifty_move_counter = 50
 threefold_counter = 0
 saved_states = []
+messages = []
 
 def sameState(b, mp, i):
     global saved_states
@@ -35,6 +36,7 @@ def addState(b, mp):
 def displayBoard(b, turn, flip=False):
     #os.system('clear')
     print("")
+    print("Move " + str(1+int(len(saved_states)/2)))
     if flip:
         for i in range(len(b)-1, -1, -1):
             s = "  " + str(int(8-i)) + " "
@@ -77,6 +79,7 @@ def makeMove(start, end, promotion=5):
         print("Made move", start, end)
         if (fifty_move_counter <= 0):
             playing = False
+            messages.append("Drawn by fifty-move rule")
         else:
             threefold_counter = 0
             addState(board, movedPieces)
@@ -85,6 +88,7 @@ def makeMove(start, end, promotion=5):
                     threefold_counter += 1
                 if threefold_counter == 3:
                     playing = False
+                    messages.append("Drawn by threefold repetition")
                     break
     else:
         print("Invalid move")
@@ -116,7 +120,7 @@ def inputMove(source):
         makeMove(myMove[0], myMove[1], promotion)
     if source == 1:
         print("Thinking...")
-        myMove = ai.minimax_ai(board, movedPieces, toPlay, 3)
+        myMove = ai.minimax_ai(board, movedPieces, toPlay)
         makeMove(myMove[0], myMove[1], myMove[2])
 def tupleMove(m):
     if not len(m) == 2 or not len(m[0]) == 2 or not len(m[1]) == 2:
@@ -143,11 +147,9 @@ playing = True
 while playing:
     inputMove(players[toPlay])
     r = displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
+    for i in range(len(messages)):
+        print(messages[i])
+    messages = []
     if not r == 0:
         playing = False
-    if playing == False:
-        if fifty_move_counter == 0:
-            print("Drawn by fifty-move rule")
-        elif threefold_counter == 3:
-            print("Drawn by threefold repetition")
 inputMove(0)
