@@ -8,11 +8,32 @@ piece_icons = ['[ ]', u'[\N{WHITE CHESS PAWN}]', u'[\N{WHITE CHESS KNIGHT}]', u'
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 1, -1: 1}
+players = {1: 0, -1: 1}
 FLIP_BOARD = (players[1] == 0 and players[-1] == 0)
 
+fifty_move_counter = 50
+threefold_counter = 0
+saved_states = []
+
+def sameState(b, mp, i):
+    global saved_states
+    for row in range(8):
+        for col in range(8):
+            if not saved_states[i][0][row][col] == b[row][col]:
+                return False
+    if not len(saved_states[i][1]) == len(mp):
+        return False
+    for p in range(len(mp)):
+        if not mp[p] in saved_states[i][1]:
+            return False
+    return True
+def addState(b, mp):
+    global saved_states
+    saved_states.append([b, mp])
+
+
 def displayBoard(b, turn, flip=False):
-    os.system('clear')
+    #os.system('clear')
     print("")
     if flip:
         for i in range(len(b)-1, -1, -1):
@@ -43,12 +64,28 @@ def makeMove(start, end, promotion=5):
     global toPlay
     global board
     global movedPieces
+    global playing
     if validMove(board, movedPieces, start, end, toPlay):
+        if board[start[0]][start[1]] in [1,7] or not board[end[0]][end[1]] == 0:
+            fifty_move_counter = 50
+        else:
+            fifty_move_counter -= 1
         madeMove = afterMove(board, movedPieces, start, end, promotion)
         board = madeMove[0]
         movedPieces = madeMove[1]
         toPlay *= -1
         print("Made move", start, end)
+        if (fifty_move_counter <= 0):
+            playing = False
+        else:
+            threefold_counter = 0
+            addState(board, movedPieces)
+            for i in range(len(saved_states)):
+                if sameState(board, movedPieces, i):
+                    threefold_counter += 1
+                if threefold_counter == 3:
+                    playing = False
+                    break
     else:
         print("Invalid move")
 
@@ -64,7 +101,10 @@ def inputMove(source):
                 displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
                 print("Invalid move")
                 if len(inputStr) > 0 and inputStr[0] == '/':
-                    print(eval(input("Command: ")))
+                    try:
+                        print(eval(input("Command: ")))
+                    except Exception as e:
+                        print(str(e))
         promotion = 5
         if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
             promotion = 0
@@ -76,7 +116,7 @@ def inputMove(source):
         makeMove(myMove[0], myMove[1], promotion)
     if source == 1:
         print("Thinking...")
-        myMove = minimax(board, movedPieces, toPlay, 3, 7500)
+        myMove = ai.minimax_ai(board, movedPieces, toPlay, 3)
         makeMove(myMove[0], myMove[1], myMove[2])
 def tupleMove(m):
     if not len(m) == 2 or not len(m[0]) == 2 or not len(m[1]) == 2:
@@ -93,6 +133,8 @@ def vm(start, end):
     return validMove(board, movedPieces, start, end, toPlay)
 def sm():
     showMoves(board, movedPieces, toPlay)
+    print("(opponent)")
+    showMoves(board, movedPieces, toPlay*-1)
 
 os.system('clear')
 displayBoard(board, toPlay)
@@ -103,3 +145,9 @@ while playing:
     r = displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
     if not r == 0:
         playing = False
+    if playing == False:
+        if fifty_move_counter == 0:
+            print("Drawn by fifty-move rule")
+        elif threefold_counter == 3:
+            print("Drawn by threefold repetition")
+inputMove(0)

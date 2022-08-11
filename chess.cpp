@@ -9,19 +9,67 @@
 #include <ctime>
 using namespace std;
 
-const int PIECE_VAL[] = { 0, 1, 3, 3, 5, 9, 99, -1, -3, -3, -5, -9, -99 };
+const int PIECE_VAL[] = { 0, 100, 320, 330, 500, 900, 20000, -100, -320, -330, -500, -900, -20000 };
 const int PIECE_SIDE[] = { 0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1 };
-const double CENTER_MASK[8][8]= {{-0.2, -0.1, 0.0, 0.0, 0.0, 0.0, -0.1, -0.2},
-                                {-0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.1},
-                                {-0.1, 0.0, 0.4, 0.8, 0.8, 0.4, 0.0, -0.1},
-                                {-0.1, 0.0, 0.8, 1.0, 1.0, 0.8, 0.0, -0.1},
-                                {-0.1, 0.0, 0.8, 1.0, 1.0, 0.8, 0.0, -0.1},
-                                {-0.1, 0.0, 0.4, 0.8, 0.8, 0.4, 0.0, -0.1},
-                                {-0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.1},
-                                {-0.2, -0.1, 0.0, 0.0, 0.0, 0.0, -0.1, -0.2}};
-const double CENTER_WEIGHT[] = {0, 0.4, 0.5, 0.25, 0.1, 0.2, -0.1, -0.4, -0.5, -0.25, -0.1, -0.2, 0.1};
 const int FILE_SEARCH[] = {3, 4, 2, 5, 1, 6, 0, 7};
 const int RANK_SEARCH[] = {3, 4, 1, 6, 0, 7, 2, 5};
+
+const int PAWN_MAP[8][8] = {{ 0,  0,  0,  0,  0,  0,  0,  0},
+                            {50, 50, 50, 50, 50, 50, 50, 50},
+                            {10, 10, 20, 30, 30, 20, 10, 10},
+                            {5,  5, 10, 25, 25, 10,  5,  5},
+                            {0,  0,  0, 20, 20,  0,  0,  0},
+                            {5, -5,-10,  0,  0,-10, -5,  5},
+                            {5, 10, 10,-20,-20, 10, 10,  5},
+                            {0,  0,  0,  0,  0,  0,  0,  0}};
+const int KNIGHT_MAP[8][8]={{-50,-40,-30,-30,-30,-30,-40,-50},
+                            {-40,-20,  0,  0,  0,  0,-20,-40},
+                            {-30,  0, 10, 15, 15, 10,  0,-30},
+                            {-30,  5, 15, 20, 20, 15,  5,-30},
+                            {-30,  0, 15, 20, 20, 15,  0,-30},
+                            {-30,  5, 10, 15, 15, 10,  5,-30},
+                            {-40,-20,  5,  5,  5,  5,-20,-40},
+                            {-50,-40,-30,-30,-30,-30,-40,-50}};
+const int BISHOP_MAP[8][8]={{-20,-10,-10,-10,-10,-10,-10,-20},
+                            {-10,  0,  0,  0,  0,  0,  0,-10},
+                            {-10,  0,  5, 10, 10,  5,  0,-10},
+                            {-10,  5,  5, 10, 10,  5,  5,-10},
+                            {-10,  0, 10, 10, 10, 10,  0,-10},
+                            {-10, 10, 10, 10, 10, 10, 10,-10},
+                            {-10,  5,  0,  0,  0,  0,  5,-10},
+                            {-20,-10,-10,-10,-10,-10,-10,-20}};
+const int ROOK_MAP[8][8] = {{ 0,  0,  0,  0,  0,  0,  0,  0},
+                            { 5, 10, 10, 10, 10, 10, 10,  5},
+                            {-5,  0,  0,  0,  0,  0,  0, -5},
+                            {-5,  0,  0,  0,  0,  0,  0, -5},
+                            {-5,  0,  0,  0,  0,  0,  0, -5},
+                            {-5,  0,  0,  0,  0,  0,  0, -5},
+                            {-5,  0,  0,  0,  0,  0,  0, -5},
+                            { 0,  0,  0,  5,  5,  0,  0,  0}};
+const int QUEEN_MAP[8][8] ={{-20,-10,-10, -5, -5,-10,-10,-20},
+                            {-10,  0,  0,  0,  0,  0,  0,-10},
+                            {-10,  0,  5,  5,  5,  5,  0,-10},
+                            { -5,  0,  5,  5,  5,  5,  0, -5},
+                            {  0,  0,  5,  5,  5,  5,  0, -5},
+                            {-10,  5,  5,  5,  5,  5,  0,-10},
+                            {-10,  0,  5,  0,  0,  0,  0,-10},
+                            {-20,-10,-10, -5, -5,-10,-10,-20}};
+const int KING_MAP[8][8] = {{-30,-40,-40,-50,-50,-40,-40,-30},
+                            {-30,-40,-40,-50,-50,-40,-40,-30},
+                            {-30,-40,-40,-50,-50,-40,-40,-30},
+                            {-30,-40,-40,-50,-50,-40,-40,-30},
+                            {-20,-30,-30,-40,-40,-30,-30,-20},
+                            {-10,-20,-20,-20,-20,-20,-20,-10},
+                            { 20, 20,-10,-10,-10,-10, 20, 20},
+                            { 20, 30, 10,  0,  0, 10, 30, 20}};
+const int KING_MAP_ENDGAME[8][8] = {{-50,-40,-30,-20,-20,-30,-40,-50},
+                                    {-30,-20,-10,  0,  0,-10,-20,-30},
+                                    {-30,-10, 20, 30, 30, 20,-10,-30},
+                                    {-30,-10, 30, 40, 40, 30,-10,-30},
+                                    {-30,-10, 30, 40, 40, 30,-10,-30},
+                                    {-30,-10, 20, 30, 30, 20,-10,-30},
+                                    {-30,-30,  0,  0,  0,  0,-30,-30},
+                                    {-50,-30,-30,-30,-30,-30,-30,-50}};
 
 typedef int square[2];
 
@@ -73,29 +121,22 @@ class Directions {
             int bm[][2] = {{1,1},{1,-1},{-1,1},{-1,-1}};
             int rm[][2] = {{1,0},{0,1},{-1,0},{0,-1}};
             int cm[][2] = {{0,2},{0,-2}};
-            if (attacks) {
-                for (int i = 0; i < 2; i++) {
-                    vector<int> d1;
-                    vector<int> d2;
-                    for (int j = 0; j < 2; j++) {
-                        d1.push_back(wpm[i][j]);
-                        d2.push_back(bpm[i][j]);
-                    }
-                    whitePawnMoves.push_back(d1);
-                    blackPawnMoves.push_back(d2);
+            for (int i = 0; i < 2; i++) {
+                vector<int> d1;
+                vector<int> d2;
+                for (int j = 0; j < 2; j++) {
+                    d1.push_back(wpm[i][j]);
+                    d2.push_back(bpm[i][j]);
                 }
-            } else {
+                whitePawnMoves.push_back(d1);
+                blackPawnMoves.push_back(d2);
+            }
+            if (!attacks) {
                 for (int i = 0; i < 2; i++) {
-                    vector<int> d1;
-                    vector<int> d2;
                     vector<int> d6;
                     for (int j = 0; j < 2; j++) {
-                        d1.push_back(wpm[i][j]);
-                        d2.push_back(bpm[i][j]);
                         d6.push_back(cm[i][j]);
                     }
-                    whitePawnMoves.push_back(d1);
-                    blackPawnMoves.push_back(d2);
                     castleMoves.push_back(d6);
                 }
                 for (int i = 2; i < 4; i++) {
@@ -318,7 +359,7 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
             return false;
     } else if (piece == 6 || piece == 12) { // king
         square choices[8] = {{start[0]+1,start[1]},{start[0]-1,start[1]},{start[0],start[1]+1},{start[0],start[1]-1},
-            {start[0]+1,start[1]+1},{start[0]+1,start[1]-1},{start[0]-1,start[1]+1},{start[0]-1,end[0]-1}};
+            {start[0]+1,start[1]+1},{start[0]+1,start[1]-1},{start[0]-1,start[1]+1},{start[0]-1,start[1]-1}};
         for (int i = 0; i < 8; i++) {
             if (sameSquare(moveTo, choices[i]))
                 return true;
@@ -409,22 +450,58 @@ vector<vector<int> > validMoves(GameState state, int turn) {
     return moves;
 }
 
-double evaluateState(GameState state) {
-    double val = 0.0;
+bool endgameState(GameState state) {
+    int whiteVal = 0;
+    int blackVal = 0;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (state.board[i][j] == 5 || state.board[i][j] == 11)
+                return false;
+            if (PIECE_SIDE[state.board[i][j]] == 1)
+                whiteVal += PIECE_VAL[state.board[i][j]];
+            if (PIECE_SIDE[state.board[i][j]] == -1)
+                blackVal -= PIECE_VAL[state.board[i][j]];
+        }
+    }
+    whiteVal -= PIECE_VAL[6];
+    blackVal += PIECE_VAL[12];
+    return (whiteVal <= 1300 && blackVal <= 1300);
+}
+
+int evaluateState(GameState state) {
+    int val = 0;
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             int piece = state.board[i][j];
             val += PIECE_VAL[piece];
-            if (piece == 2 || piece == 3 || piece == 4 || piece == 8 || piece == 9 || piece == 10)
-                val += 0.5*PIECE_SIDE[piece]*state.moved[i][j];
-            else if (piece == 1 && i < 5)
-                val += (6-i)*0.15;
-            else if (piece == 7 && i > 2)
-                val -= (i-1)*0.15;
-            val += CENTER_WEIGHT[piece]*CENTER_MASK[i][j];
+            switch(piece) {
+                case 0: break;
+                case 1: val += PAWN_MAP[i][j]; break;
+                case 2: val += KNIGHT_MAP[i][j]; break;
+                case 3: val += BISHOP_MAP[i][j]; break;
+                case 4: val += ROOK_MAP[i][j]; break;
+                case 5: val += QUEEN_MAP[i][j]; break;
+                case 7: val -= PAWN_MAP[7-i][j]; break;
+                case 8: val -= KNIGHT_MAP[7-i][j]; break;
+                case 9: val -= BISHOP_MAP[7-i][j]; break;
+                case 10: val -= ROOK_MAP[7-i][j]; break;
+                case 11: val -= QUEEN_MAP[7-i][j]; break;
+                case 6:
+                    if (endgameState(state))
+                        val += KING_MAP_ENDGAME[i][j];
+                    else
+                        val += KING_MAP[i][j];
+                    break;
+                case 12:
+                    if (endgameState(state))
+                        val -= KING_MAP_ENDGAME[7-i][j];
+                    else
+                        val -= KING_MAP[7-i][j];
+                    break;
+            }
         }
     }
-    val += 0.05 * (((double)rand()) / RAND_MAX);
+    val += (rand()%10)-5;
     return val;
 }
 
@@ -458,57 +535,37 @@ struct MoveRoot {
         square end;
 };
 
-double alphaBeta(GameState state, int depth, int turn, MoveRoot* root, double alpha, double beta, int timeLimit) {
+int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
     if (depth == 0) {
-        return evaluateState(state);
+        return turn*evaluateState(state);
     }
     vector<vector<int> > moves = validMoves(state, turn);
     if (moves.size() == 0) {
         if (inCheck(state, turn))
-            return -1000*turn;
+            return -20000*turn;
         else
             return 0;
     }
-    double value;
-    if (turn == 1) {
-        double maxVal = alpha;
-        for (int i = 0; i < moves.size(); i++) {
-            GameState newState = afterVecMove(state, moves.at(i));
-            value = alphaBeta(newState, depth-1, turn*-1, nullptr, alpha, beta, timeLimit);
-            if (value > maxVal) {
-                maxVal = value;
-                if (root != nullptr) {
-                    //cout << (i+1) << "/" << moves.size() << endl;
-                    root->start[0] = moves.at(i).at(0);
-                    root->start[1] = moves.at(i).at(1);
-                    root->end[0] = moves.at(i).at(2);
-                    root->end[1] = moves.at(i).at(3);
-                }
-            }
-            alpha = max(alpha, value);
-            if (alpha >= beta || get_millis()-start_calc >= timeLimit) {
-                break;
+    int value = -100000;
+    for (int i = 0; i < moves.size(); i++) {
+        GameState newState = afterVecMove(state, moves.at(i));
+        int nextDepth = depth-1;
+        if (trueDepth == 1 && PIECE_SIDE[state.board[moves.at(i).at(2)][moves.at(i).at(3)]] == turn*-1)
+            nextDepth += 1;
+        int curr_val = -1*alphaBeta(newState, nextDepth, -1*turn, nullptr, trueDepth-1, -1*beta, -1*alpha, timeLimit);
+        if (curr_val > value) {
+            value = curr_val;
+            if (root != nullptr) {
+                root->start[0] = moves.at(i).at(0);
+                root->start[1] = moves.at(i).at(1);
+                root->end[0] = moves.at(i).at(2);
+                root->end[1] = moves.at(i).at(3);
             }
         }
-    } else {
-        double minVal = beta;
-        for (int i = 0; i < moves.size(); i++) {
-            GameState newState = afterVecMove(state, moves.at(i));
-            value = alphaBeta(newState, depth-1, turn*-1, nullptr, alpha, beta, timeLimit);
-            if (value < minVal) {
-                minVal = value;
-                if (root != nullptr) {
-                    //cout << (i+1) << "/" << moves.size() << endl;
-                    root->start[0] = moves.at(i).at(0);
-                    root->start[1] = moves.at(i).at(1);
-                    root->end[0] = moves.at(i).at(2);
-                    root->end[1] = moves.at(i).at(3);
-                }
-            }
-            beta = min(beta, value);
-            if (alpha >= beta || get_millis()-start_calc >= timeLimit) {
-                break;
-            }
+        //if (root != nullptr) cout << moves.at(i).at(0) << moves.at(i).at(1) << "->" << moves.at(i).at(2) << moves.at(i).at(3) << " val = " << value << endl;
+        alpha = max(alpha, value);
+        if (alpha >= beta || get_millis()-start_calc >= timeLimit) {
+            break;
         }
     }
     return value;
@@ -519,12 +576,16 @@ extern "C" void set_calc_time(int c) {
     calc_time = c;
 }
 
-extern "C" int minimax(GameState s, int turn, int depth) {
+extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=true) {
     srand(time(0));
     square noSquare = {-1,-1};
     MoveRoot* root = new MoveRoot();
+    cout << "score: " << evaluateState(s) << endl;
     start_calc = get_millis();
-    alphaBeta(s, depth, turn, root, -1000, 1000, calc_time);
+    int searchDepth = depth;
+    if (moreEndgameDepth && endgameState(s))
+        searchDepth += 1;
+    alphaBeta(s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
     cout << "res = " << res << endl;
     delete root;
