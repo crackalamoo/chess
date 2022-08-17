@@ -3,13 +3,11 @@ import ai
 from chess import *
 import os
 
-piece_icons = ['[ ]', u'[\N{WHITE CHESS PAWN}]', u'[\N{WHITE CHESS KNIGHT}]', u'[\N{WHITE CHESS BISHOP}]', u'[\N{WHITE CHESS ROOK}]', u'[\N{WHITE CHESS QUEEN}]', u'[\N{WHITE CHESS KING}]',
-    u'[\N{BLACK CHESS PAWN}]', u'[\N{BLACK CHESS KNIGHT}]', u'[\N{BLACK CHESS BISHOP}]', u'[\N{BLACK CHESS ROOK}]', u'[\N{BLACK CHESS QUEEN}]', u'[\N{BLACK CHESS KING}]']
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 1, -1: 1}
-FLIP_BOARD = (players[1] == 0 and players[-1] == 0)
+players = {1: 0, -1: 0}
+FLIP_BOARD = (players[-1] == 0)
 
 fifty_move_counter = 50
 threefold_counter = 0

@@ -7,6 +7,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <ctime>
+#include <cmath>
 using namespace std;
 
 const int PIECE_VAL[] = { 0, 100, 320, 330, 500, 900, 20000, -100, -320, -330, -500, -900, -20000 };
@@ -14,13 +15,13 @@ const int PIECE_SIDE[] = { 0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1 };
 const int FILE_SEARCH[] = {3, 4, 2, 5, 1, 6, 0, 7};
 const int RANK_SEARCH[] = {3, 4, 1, 6, 0, 7, 2, 5};
 
-const int PAWN_MAP[8][8] = {{ 0,  0,  0,  0,  0,  0,  0,  0},
-                            {50, 50, 50, 50, 50, 50, 50, 50},
+const int PAWN_MAP[8][8] = {{90, 90, 90, 90, 90, 90, 90, 90},
+                            {60, 50, 50, 50, 50, 50, 50, 60},
                             {10, 10, 20, 30, 30, 20, 10, 10},
                             {5,  5, 10, 25, 25, 10,  5,  5},
                             {0,  0,  0, 20, 20,  0,  0,  0},
                             {5, -5,-10,  0,  0,-10, -5,  5},
-                            {5, 10, 10,-30,-30, 10, 10,  5},
+                            {5, 10, 10,-35,-35, 10, 10,  5},
                             {0,  0,  0,  0,  0,  0,  0,  0}};
 const int KNIGHT_MAP[8][8]={{-50,-40,-30,-30,-30,-30,-40,-50},
                             {-40,-20,  0,  0,  0,  0,-20,-40},
@@ -61,7 +62,7 @@ const int KING_MAP[8][8] = {{-30,-40,-40,-50,-50,-40,-40,-30},
                             {-20,-30,-30,-40,-40,-30,-30,-20},
                             {-10,-20,-20,-20,-20,-20,-20,-10},
                             { 20, 20,-10,-10,-10,-10, 20, 20},
-                            { 20, 30, 10,  0,  0, 10, 30, 20}};
+                            { 20, 30, 20,  0,  0, 10, 40, 20}};
 const int KING_MAP_ENDGAME[8][8] = {{-50,-40,-30,-20,-20,-30,-40,-50},
                                     {-30,-20,-10,  0,  0,-10,-20,-30},
                                     {-30,-10, 20, 30, 30, 20,-10,-30},
@@ -231,34 +232,32 @@ bool inCheck(GameState state, int turn) {
                 square startPos = {i,j};
                 switch(piece) {
                     case 1:
-                        directions = addDirection(directions, atkHolder.whitePawnMoves);
+                        directions = atkHolder.whitePawnMoves;
                         break;
                     case 7:
-                        directions = addDirection(directions, atkHolder.blackPawnMoves);
+                        directions = atkHolder.blackPawnMoves;
                         break;
                     case 2:
                     case 8:
-                        directions = addDirection(directions, atkHolder.knightMoves);
+                        directions = atkHolder.knightMoves;
                         break;
                     case 3:
                     case 9:
-                        directions = addDirection(directions, atkHolder.bishopMoves);
+                        directions = atkHolder.bishopMoves;
                         steps = 7;
                         break;
                     case 4:
                     case 10:
-                        directions = addDirection(directions, atkHolder.rookMoves);
+                        directions = atkHolder.rookMoves;
                         steps = 7;
                         break;
                     case 6:
                     case 12:
-                        directions = addDirection(directions, atkHolder.bishopMoves);
-                        directions = addDirection(directions, atkHolder.rookMoves);
+                        directions = atkHolder.queenMoves;
                         break;
                     case 5:
                     case 11:
-                        directions = addDirection(directions, atkHolder.bishopMoves);
-                        directions = addDirection(directions, atkHolder.rookMoves);
+                        directions = atkHolder.queenMoves;
                         steps = 7;
                         break;
                 }
@@ -324,7 +323,7 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
         } else if (end[0] == start[0]+1 && (end[1] == start[1]+1 || end[1] == start[1]-1)) { // capturing diagonally
             square ep = {end[0]-1, end[1]};
             if (state.board[end[0]][end[1]] == 0) {
-                if (state.board[end[0]+1][end[1]] == 1 && end[0] == 5 && state.board[6][end[1]] == 0 && sameSquare(state.lastMoved, ep))
+                if (state.board[end[0]-1][end[1]] == 1 && end[0] == 5 && state.board[6][end[1]] == 0 && sameSquare(state.lastMoved, ep))
                     return true;
                 return false;
             }
@@ -387,6 +386,7 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
 
 vector<vector<int> > validMoves(GameState state, int turn) {
     vector< vector<int> > moves;
+    vector<int> m;
     for (int i0 = 0; i0 < 8; i0++) {
         for (int j0 = 0; j0 < 8; j0++) {
             int i = RANK_SEARCH[i0];
@@ -405,16 +405,16 @@ vector<vector<int> > validMoves(GameState state, int turn) {
                         break;
                     case 2:
                     case 8:
-                        directions = addDirection(directions, dirHolder.knightMoves);
+                        directions = dirHolder.knightMoves;
                         break;
                     case 3:
                     case 9:
-                        directions = addDirection(directions, dirHolder.bishopMoves);
+                        directions = dirHolder.bishopMoves;
                         steps = 7;
                         break;
                     case 4:
                     case 10:
-                        directions = addDirection(directions, dirHolder.rookMoves);
+                        directions = dirHolder.rookMoves;
                         steps = 7;
                         break;
                     case 6:
@@ -424,7 +424,7 @@ vector<vector<int> > validMoves(GameState state, int turn) {
                         break;
                     case 5:
                     case 11:
-                        directions = addDirection(directions, dirHolder.queenMoves);
+                        directions = dirHolder.queenMoves;
                         steps = 7;
                         break;
                 }
@@ -434,7 +434,6 @@ vector<vector<int> > validMoves(GameState state, int turn) {
                         pos[0] += directions.at(d).at(0);
                         pos[1] += directions.at(d).at(1);
                         if (validMove(state, startPos, pos, turn)) {
-                            vector<int> m;
                             m.clear();
                             m.push_back(startPos[0]);
                             m.push_back(startPos[1]);
@@ -531,7 +530,7 @@ int myAbs(int n) {
     return n*(n < 0);
 }
 
-int evaluateState(GameState state) {
+extern "C" int evaluateState(GameState state) {
     int val = 0;
     square whiteKingSquare;
     square blackKingSquare;
@@ -592,6 +591,16 @@ int evaluateState(GameState state) {
     return val;
 }
 
+int evaluateMaterial(GameState state) {
+    int val = 0;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            val += PIECE_VAL[state.board[i][j]];
+        }
+    }
+    return val;
+}
+
 GameState afterVecMove(GameState state, vector<int> move, int promotion=5) {
     square start = {move.at(0), move.at(1)};
     square end = {move.at(2), move.at(3)};
@@ -620,6 +629,9 @@ struct MoveRoot {
     public:
         square start;
         square end;
+        int depth;
+        int trueDepth;
+        int material;
 };
 
 int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
@@ -637,35 +649,37 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
     for (int i = 0; i < moves.size(); i++) {
         GameState newState = afterVecMove(state, moves.at(i));
         int nextDepth = depth-1;
-        if (trueDepth == 1 || trueDepth == 2) {
-            if ((PIECE_SIDE[state.board[moves.at(i).at(2)][moves.at(i).at(3)]] == turn*-1
-            && myAbs(PIECE_VAL[state.board[moves.at(i).at(2)][moves.at(i).at(3)]]) > 300)
-            || moves.size() <= 10) {
-                nextDepth = depth;
-                if (get_millis()-start_calc < timeLimit/3 && moves.size() >= 10)
+        if (trueDepth >= 0 || (trueDepth == -1 && get_millis()-start_calc < timeLimit*0.25)) {
+            int capturePiece = state.board[moves.at(i).at(2)][moves.at(i).at(3)];
+            if (PIECE_SIDE[capturePiece] == turn*-1 && (evaluateMaterial(newState) == root->material || get_millis()-start_calc < timeLimit*0.3)) {
+                nextDepth = 1;
+                if (trueDepth >= 1 || get_millis()-start_calc < timeLimit*0.75)
+                    nextDepth += 1;
+                if (trueDepth >= 2)
                     nextDepth += 1;
             }
         }
-        int curr_val = 10*trueDepth-alphaBeta(newState, nextDepth, -1*turn, nullptr, trueDepth-1, -1*beta, -1*alpha, timeLimit);
+        int curr_val = -1*alphaBeta(newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit)*pow(0.95, root->trueDepth-trueDepth);
         if (curr_val > value) {
             value = curr_val;
-            if (root != nullptr) {
+            if (trueDepth == root->depth) {
                 root->start[0] = moves.at(i).at(0);
                 root->start[1] = moves.at(i).at(1);
                 root->end[0] = moves.at(i).at(2);
                 root->end[1] = moves.at(i).at(3);
-                // if (root != nullptr) cout << moves.at(i).at(0) << moves.at(i).at(1) << "->" << moves.at(i).at(2) << moves.at(i).at(3) << " val = " << value << endl;
             }
+            //cout << "best move: d" << trueDepth << " " << moves.at(i).at(0) << moves.at(i).at(1) << "->" << moves.at(i).at(2) << moves.at(i).at(3) << endl;
         }
         alpha = max(alpha, value);
         if (alpha >= beta || get_millis()-start_calc >= timeLimit) {
-            if (root != nullptr && get_millis()-start_calc >= timeLimit)
+            if (trueDepth == root->depth && get_millis()-start_calc >= timeLimit)
                 cout << "Out of time" << endl;
             break;
         }
     }
-    if (root != nullptr)
-        cout << "Anticipated value: " << value << endl;
+    root->trueDepth = min(root->trueDepth, trueDepth);
+    if (trueDepth == root->depth)
+        cout << " Anticipated value: " << value << endl;
     return value;
 
 }
@@ -678,13 +692,18 @@ extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=t
     srand(time(0));
     square noSquare = {-1,-1};
     MoveRoot* root = new MoveRoot();
-    int score0 = evaluateState(s);
-    cout << "score: " << score0 << endl;
-    start_calc = get_millis();
     int searchDepth = depth;
     if (moreEndgameDepth && endgameState(s))
-        searchDepth += 2;
+        searchDepth += 1;
+    root->depth = searchDepth;
+    root->trueDepth = searchDepth;
+    root->material = evaluateMaterial(s);
+    int score0 = evaluateState(s);
+    cout << "turn: " << turn << endl;
+    cout << "score: " << score0 << endl;
+    start_calc = get_millis();
     alphaBeta(s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
+    cout << "to depth " << root->trueDepth << endl;
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
     cout << "res = " << res << endl;
     delete root;

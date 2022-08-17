@@ -1,4 +1,5 @@
 import ctypes
+from math import *
 
 DEFAULT_BOARD = [[10,8, 9, 11,12,9, 8,10],
                 [7, 7, 7, 7, 7, 7, 7, 7],
@@ -11,6 +12,9 @@ DEFAULT_BOARD = [[10,8, 9, 11,12,9, 8,10],
 for i in range(8):
     for j in range(8):
         DEFAULT_BOARD[i][j] = bytes([DEFAULT_BOARD[i][j]])
+
+piece_icons = ['[ ]', u'[\N{WHITE CHESS PAWN}]', u'[\N{WHITE CHESS KNIGHT}]', u'[\N{WHITE CHESS BISHOP}]', u'[\N{WHITE CHESS ROOK}]', u'[\N{WHITE CHESS QUEEN}]', u'[\N{WHITE CHESS KING}]',
+    u'[\N{BLACK CHESS PAWN}]', u'[\N{BLACK CHESS KNIGHT}]', u'[\N{BLACK CHESS BISHOP}]', u'[\N{BLACK CHESS ROOK}]', u'[\N{BLACK CHESS QUEEN}]', u'[\N{BLACK CHESS KING}]']
 
 
 class GameState(ctypes.Structure):
@@ -84,6 +88,8 @@ cpp_showMoves.restype = ctypes.c_int
 cpp_gameRes = chessFuncs.gameRes
 cpp_gameRes.restype = ctypes.c_int
 cpp_setCalc = chessFuncs.set_calc_time
+cpp_evalState = chessFuncs.evaluateState
+cpp_evalState.restype = ctypes.c_int
 
 
 def afterMove(b, mp, start, end, promotion=5):
@@ -107,3 +113,50 @@ def minimax(b, mp, turn, depth, time, moreEndgameDepth):
 def showMoves(b, mp, turn):
     state = cppState(b, mp)
     cpp_showMoves(state, ctypes.c_int(turn))
+def evalState(b, mp):
+    state = cppState(b, mp)
+    return cpp_evalState(state)
+
+def validMoves(b, mp, turn):
+    for i in range(8):
+        for j in range(8):
+            b[i][j] = int.from_bytes(b[i][j], 'little')
+    moves = []
+    whitePawnDirs = [[-1,-1],[-1,1],[-1,0],[-2,0]]
+    blackPawnDirs = [[1,-1],[1,1],[1,0],[2,0]]
+    knightDirs = [[2,1],[2,-1],[1,2],[1,-2],[-1,2],[-1,-2],[-2,1],[-2,-1]]
+    bishopDirs = [[1,1],[-1,1],[1,-1],[-1,-1]]
+    rookDirs = [[1,0],[0,1],[-1,0],[0,-1]]
+    queenDirs = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[0,1],[-1,0],[0,-1]]
+    kingDirs = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[0,1],[-1,0],[0,-1],[0,2],[0,-2]]
+    for i in range(8):
+        for j in range(8):
+            if abs(b[i][j]) == turn:
+                piece = b[i][j]
+                directions = []
+                steps = 1
+                if piece == 1:
+                    directions = whitePawnDirs
+                elif piece == 7:
+                    directions = blackPawnDirs
+                elif piece in [2,8]:
+                    directions = knightDirs
+                elif piece in [3,9]:
+                    directions = bishopDirs
+                elif piece in [4,10]:
+                    directions = rookDirs
+                elif piece in [5,11]:
+                    directions = queenDirs
+                elif piece in [6,12]:
+                    directions = kingDirs
+                if piece in [3,4,5,9,10,11]:
+                    steps = 7
+                startPos = [i,j]
+                for d in range(len(directions)):
+                    pos = [i,j]
+                    for k in range(steps):
+                        pos[0] += directions[d][0]
+                        pos[1] += directions[d][1]
+                        if (validMove(b, mp, startPos, pos, turn)):
+                            moves.append([[startPos[0],startPos[1]],[pos[0],pos[1]]])
+    return moves
