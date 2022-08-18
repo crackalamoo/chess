@@ -3,7 +3,7 @@ from ai import *
 import tensorflow as tf
 import numpy as np
 
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 NUM_EPOCHS = 5
 TEST_SIZE = 20000
 
