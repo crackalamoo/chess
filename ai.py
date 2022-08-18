@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Conv2D, AveragePooling2D, Flatten, BatchNormalization, Dropout, Concatenate
+from tensorflow.keras.layers import Dense, Conv2D, GlobalAveragePooling2D, Flatten, BatchNormalization, Dropout, Concatenate
 from tensorflow.keras.regularizers import L2
 from tensorflow.keras import Model, Input
 import numpy as np
@@ -12,26 +12,20 @@ def minimax_ai(b, mp, turn):
     #return chess.minimax(b, mp, turn, 2, {-1: 7500, 1: 7500}[turn], True)
     return chess.minimax(b, mp, turn, 2, 7500, True)
 
-def int_board(b):
-    ib = np.zeros((8,8))
-    for i in range(8):
-        for j in range(8):
-            ib[i][j] = int.from_bytes(b[i][j], 'little')
-    return ib
-
-def one_hot_board(b):
-    ohb = b
-    #ohb = b.flatten()
-    """if black:
-        ohb = ohb[::-1][:]
-        ohb[ohb > 6] += 50
-        ohb[(0 < ohb) & (ohb < 7)] += 6
-        ohb[ohb > 20] -= 56"""
-    ohb -= 1
-    return tf.one_hot(ohb,12)
+def one_hot_board(b, mp):
+    wm = chess.validMoves(b, mp, 1) # white moves
+    bm = chess.validMoves(b, mp, -1) # black moves
+    piece_board = np.asarray(b)
+    piece_board -= 1
+    ohb = tf.one_hot(piece_board,14).numpy()
+    for i in range(len(wm)):
+        ohb[wm[i][1][0]][wm[i][1][1]][12] = 1
+    for i in range(len(bm)):
+        ohb[bm[i][1][0]][bm[i][1][1]][13] = 1
+    return ohb
 
 def define_model_old():
-    input = Input(shape=(8,8,12))
+    input = Input(shape=(8,8,14))
     reg = L2(0.01)
     """
     h0 = Flatten()(input)
@@ -59,38 +53,31 @@ def define_model_old():
     return model
 
 def define_model():
-    input = Input(shape=(8,8,12))
+    input = Input(shape=(8,8,14))
     reg = L2(0.01)
 
-    m0 = Conv2D(64, (1,1), activation='relu', padding='same')(input)
-    m1 = Conv2D(64, (3,3), activation='relu', padding='same')(input)
-    m2 = Conv2D(64, (5,5), activation='relu', padding='same')(input)
-    m3 = Conv2D(64, (7,7), activation='relu', padding='same')(input)
-    m0 = BatchNormalization()(m0)
-    m1 = BatchNormalization()(m1)
-    m2 = BatchNormalization()(m2)
-    m3 = BatchNormalization()(m3)
-    m0 = Conv2D(64, (1,1), activation='relu', padding='same')(m0)
-    m1 = Conv2D(64, (3,3), activation='relu', padding='same')(m1)
-    m2 = Conv2D(64, (5,5), activation='relu', padding='same')(m2)
-    m3 = Conv2D(64, (7,7), activation='relu', padding='same')(m3)
-    print(m0.shape)
-    m0 = AveragePooling2D((8,8))(m0)
-    m1 = AveragePooling2D((8,8))(m1)
-    m2 = AveragePooling2D((8,8))(m2)
-    m3 = AveragePooling2D((8,8))(m3)
-    print(m0.shape)
-    m0 = Flatten()(m0)
-    m1 = Flatten()(m1)
-    m2 = Flatten()(m2)
-    m3 = Flatten()(m3)
-    print(m0.shape)
+    m0 = Conv2D(64, (1,1), padding='same')(input)
+    m1 = Conv2D(64, (3,3), padding='same')(input)
+    m2 = Conv2D(64, (5,5), padding='same')(input)
+    m3 = Conv2D(64, (7,7), padding='same')(input)
+    #m0 = BatchNormalization()(m0)
+    #m1 = BatchNormalization()(m1)
+    #m2 = BatchNormalization()(m2)
+    #m3 = BatchNormalization()(m3)
+    m0 = Conv2D(32, (1,1), padding='same', kernel_regularizer=reg, bias_regularizer=reg)(m0)
+    m1 = Conv2D(32, (3,3), padding='same', kernel_regularizer=reg, bias_regularizer=reg)(m1)
+    m2 = Conv2D(32, (5,5), padding='same', kernel_regularizer=reg, bias_regularizer=reg)(m2)
+    m3 = Conv2D(32, (7,7), padding='same', kernel_regularizer=reg, bias_regularizer=reg)(m3)
+    m0 = GlobalAveragePooling2D()(m0)
+    m1 = GlobalAveragePooling2D()(m1)
+    m2 = GlobalAveragePooling2D()(m2)
+    m3 = GlobalAveragePooling2D()(m3)
 
     model = Concatenate(axis=1)([m0,m1,m2,m3])
-    print(model.shape)
-    model = Dense(256, activation='relu')(model)
+    model = Dense(128, activation='relu')(model)
+    model = Dropout(0.2)(model)
     model = Dense(32, activation='relu')(model)
-    model = Dense(1, activation='sigmoid')(model) # probability white wins
+    model = Dense(1, activation='sigmoid', use_bias=False)(model) # probability white wins
     model = Model(inputs=input, outputs=model)
 
     model.compile(
@@ -102,6 +89,8 @@ def define_model():
     print(model.summary())
 
     return model
+def load_model():
+    return tf.keras.models.load_model("model")
 
 def pgn_to_move(pgn, b, mp, turn):
     # possible move formats:
@@ -111,7 +100,7 @@ def pgn_to_move(pgn, b, mp, turn):
     promotion = 5
     pgn = pgn.replace("x","").replace("+","").replace("#","")
     piece = 1
-    ib = int_board(b)
+    ib = b
     try:
         piece = {"N": 2, "B": 3, "R": 4, "Q": 5, "K": 6}[pgn[0]]
         pgn = pgn[1:]
@@ -152,22 +141,13 @@ def pgn_to_move(pgn, b, mp, turn):
                     break
     move = [start, end, promotion]
     return move
-def move_pgn(pgn, b, mp, turn):
-    move = pgn_to_move(pgn, b, mp, turn)
-    newBoard = chess.afterMove(b, mp, move[0], move[1], move[2])
-    return newBoard
+
 def debugBoard(b):
     for i in range(8):
         s = ""
         for j in range(8):
             s += chess.piece_icons[int(b[i][j])]
         print(s)
-
-def movePrint(pgn, sb, turn):
-    sb = move_pgn(pgn, sb[0], sb[1], turn)
-    print(int_board(sb[0]), sb[1])
-
-
 
 
 

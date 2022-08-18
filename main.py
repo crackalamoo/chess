@@ -39,24 +39,24 @@ def displayBoard(b, turn, flip=False):
         for i in range(len(b)-1, -1, -1):
             s = "  " + str(int(8-i)) + " "
             for j in range(len(b[i])-1, -1, -1):
-                s += piece_icons[ord(b[i][j])]
+                s += piece_icons[b[i][j]]
             print(s)
         print("     h  g  f  e  d  c  b  a")
     else:
         for i in range(len(b)):
             s = "  " + str(int(8-i)) + " "
             for j in range(len(b[i])):
-                s += piece_icons[ord(b[i][j])]
+                s += piece_icons[b[i][j]]
             print(s)
         print("     a  b  c  d  e  f  g  h")
     res = gameRes(board, movedPieces, turn)
     check = inCheck(board, movedPieces, turn)
     if check:
-        print("Check")
+        print("\033[91mCheck\033[0m")
         if res == 1:
-            print("Checkmate")
+            print("\033[91m\033[1mCheckmate\033[0m")
     if res == 2:
-        print("Stalemate")
+        print("\033[93m\033[1mStalemate\033[0m")
     return res
 
 
@@ -65,6 +65,8 @@ def makeMove(start, end, promotion=5):
     global board
     global movedPieces
     global playing
+    global fifty_move_counter
+    global threefold_counter
     if validMove(board, movedPieces, start, end, toPlay):
         if board[start[0]][start[1]] in [1,7] or not board[end[0]][end[1]] == 0:
             fifty_move_counter = 50
@@ -77,7 +79,7 @@ def makeMove(start, end, promotion=5):
         print("Made move", start, end)
         if (fifty_move_counter <= 0):
             playing = False
-            messages.append("Drawn by fifty-move rule")
+            messages.append("\033[93m\033[1mDrawn by fifty-move rule\033[0m")
         else:
             threefold_counter = 0
             addState(board, movedPieces)
@@ -86,7 +88,7 @@ def makeMove(start, end, promotion=5):
                     threefold_counter += 1
                 if threefold_counter == 3:
                     playing = False
-                    messages.append("Drawn by threefold repetition")
+                    messages.append("\033[93m\033[1mDrawn by threefold repetition\033[0m")
                     break
     else:
         print("Invalid move")
@@ -96,9 +98,16 @@ def inputMove(source):
     print({1: "White", -1: "Black"}[toPlay] + " to play")
     if source == 0:
         myMove = []
+        promotion = 5
         while not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
             inputStr = input("Move: ")
-            myMove = tupleMove(inputStr.split(" "))
+            try:
+                myMove = ai.pgn_to_move(inputStr, board, movedPieces, toPlay)
+                promotion = myMove[2]
+                myMove = [myMove[0], myMove[1]]
+            except:
+                myMove = []
+                print("Error understanding move")
             if not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
                 displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
                 print("Invalid move")
@@ -107,8 +116,7 @@ def inputMove(source):
                         print(eval(input("Command: ")))
                     except Exception as e:
                         print(str(e))
-        promotion = 5
-        if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+        if ((board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7)) and inputStr.find("=") == -1:
             promotion = 0
             while not (2 <= promotion <= 5):
                 try:

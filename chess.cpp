@@ -75,7 +75,7 @@ const int KING_MAP_ENDGAME[8][8] = {{-50,-40,-30,-20,-20,-30,-40,-50},
 typedef int square[2];
 
 struct GameState {
-    char board[8][8];
+    int board[8][8];
     bool moved[8][8];
     square lastMoved;
 };

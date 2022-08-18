@@ -1,4 +1,5 @@
 import ctypes
+import numpy as np
 from math import *
 
 DEFAULT_BOARD = [[10,8, 9, 11,12,9, 8,10],
@@ -9,20 +10,18 @@ DEFAULT_BOARD = [[10,8, 9, 11,12,9, 8,10],
                 [0, 0, 0, 0, 0, 0, 0, 0],
                 [1, 1, 1, 1, 1, 1, 1, 1],
                 [4, 2, 3, 5, 6, 3, 2, 4]]
-for i in range(8):
-    for j in range(8):
-        DEFAULT_BOARD[i][j] = bytes([DEFAULT_BOARD[i][j]])
 
 piece_icons = ['[ ]', u'[\N{WHITE CHESS PAWN}]', u'[\N{WHITE CHESS KNIGHT}]', u'[\N{WHITE CHESS BISHOP}]', u'[\N{WHITE CHESS ROOK}]', u'[\N{WHITE CHESS QUEEN}]', u'[\N{WHITE CHESS KING}]',
     u'[\N{BLACK CHESS PAWN}]', u'[\N{BLACK CHESS KNIGHT}]', u'[\N{BLACK CHESS BISHOP}]', u'[\N{BLACK CHESS ROOK}]', u'[\N{BLACK CHESS QUEEN}]', u'[\N{BLACK CHESS KING}]']
+PIECE_SIDE = [0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1]
 
 
 class GameState(ctypes.Structure):
-    _fields_ = [("board", (ctypes.c_char*8)*8), ("moved", (ctypes.c_bool*8)*8), ("lastMoved", ctypes.c_int*2)]
+    _fields_ = [("board", (ctypes.c_int*8)*8), ("moved", (ctypes.c_bool*8)*8), ("lastMoved", ctypes.c_int*2)]
 
 def cppBoard(b):
     input_board = []
-    cpp_row = ctypes.c_char*8
+    cpp_row = ctypes.c_int*8
     cpp_board = cpp_row*8
     for i in range(8):
         input_board.append(cpp_row(*b[i]))
@@ -118,9 +117,6 @@ def evalState(b, mp):
     return cpp_evalState(state)
 
 def validMoves(b, mp, turn):
-    for i in range(8):
-        for j in range(8):
-            b[i][j] = int.from_bytes(b[i][j], 'little')
     moves = []
     whitePawnDirs = [[-1,-1],[-1,1],[-1,0],[-2,0]]
     blackPawnDirs = [[1,-1],[1,1],[1,0],[2,0]]
@@ -131,7 +127,7 @@ def validMoves(b, mp, turn):
     kingDirs = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[0,1],[-1,0],[0,-1],[0,2],[0,-2]]
     for i in range(8):
         for j in range(8):
-            if abs(b[i][j]) == turn:
+            if PIECE_SIDE[b[i][j]] == turn:
                 piece = b[i][j]
                 directions = []
                 steps = 1
