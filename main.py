@@ -1,6 +1,14 @@
 import numpy as np
 import ai
-from chess import *
+if __name__ == "__main__":
+    import chess as py_chess
+    import chess.svg
+    import threading
+    from PyQt5 import QtCore
+    from PyQt5.QtSvg import QSvgWidget
+    from PyQt5.QtWidgets import QApplication, QMainWindow
+from chess_core import *
+import sys
 import os
 
 movedPieces = []
@@ -15,54 +23,70 @@ saved_states = []
 messages = []
 
 nn_model = ai.load_model()
+    
+class ChessWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.resize(900, 900)
+        self.chessboard = py_chess.Board()
+        self.widgetSvg = QSvgWidget(parent=self)
+        self.widgetSvg.setGeometry(10, 10, 880, 880)
+        self.paint()
+    def paint(self, event=None):
+        svg = chess.svg.board(self.chessboard).encode("UTF-8")
+        self.widgetSvg.load(svg)
+        self.widgetSvg.update()
+        self.widgetSvg.show()
+    def move(self, move, isPromotion):
+        files = ['a','b','c','d','e','f','g','h']
+        uci = ""
+        uci += files[move[0][1]]
+        uci += str(8-move[0][0])
+        uci += files[move[1][1]]
+        uci += str(8-move[1][0])
+        if isPromotion:
+            uci += {2: 'n', 3: 'b', 4: 'r', 5: 'q'}[move[2]]
+        move = py_chess.Move.from_uci(uci)
+        self.chessboard.push(move)
+        self.paint()
 
-def sameState(b, mp, i):
-    global saved_states
-    for row in range(8):
-        for col in range(8):
-            if not saved_states[i][0][row][col] == b[row][col]:
-                return False
-    if not len(saved_states[i][1]) == len(mp):
-        return False
-    for p in range(len(mp)):
-        if not mp[p] in saved_states[i][1]:
-            return False
-    return True
 def addState(b, mp):
     global saved_states
     saved_states.append([b, mp])
 
 
 def displayBoard(b, turn, flip=False):
-    #os.system('clear')
-    print("")
-    print("Move " + str(1+int(len(saved_states)/2)))
-    if flip:
-        for i in range(len(b)-1, -1, -1):
-            s = "  " + str(int(8-i)) + " "
-            for j in range(len(b[i])-1, -1, -1):
-                s += piece_icons[b[i][j]]
-            print(s)
-        print("     h  g  f  e  d  c  b  a")
-    else:
-        for i in range(len(b)):
-            s = "  " + str(int(8-i)) + " "
-            for j in range(len(b[i])):
-                s += piece_icons[b[i][j]]
-            print(s)
-        print("     a  b  c  d  e  f  g  h")
-    res = gameRes(board, movedPieces, turn)
-    check = inCheck(board, movedPieces, turn)
-    if check:
-        print("\033[91mCheck\033[0m")
-        if res == 1:
-            print("\033[91m\033[1mCheckmate\033[0m")
-    if res == 2:
-        print("\033[93m\033[1mStalemate\033[0m")
-    return res
+    if __name__ == "__main__":
+        #os.system('clear')
+        print("")
+        print("Move " + str(1+int(len(saved_states)/2)))
+        """
+        if flip:
+            for i in range(len(b)-1, -1, -1):
+                s = "  " + str(int(8-i)) + " "
+                for j in range(len(b[i])-1, -1, -1):
+                    s += piece_icons[b[i][j]]
+                print(s)
+            print("     h  g  f  e  d  c  b  a")
+        else:
+            for i in range(len(b)):
+                s = "  " + str(int(8-i)) + " "
+                for j in range(len(b[i])):
+                    s += piece_icons[b[i][j]]
+                print(s)
+            print("     a  b  c  d  e  f  g  h")"""
+        res = gameRes(board, movedPieces, turn)
+        check = inCheck(board, movedPieces, turn)
+        if check:
+            print("\033[91mCheck\033[0m")
+            if res == 1:
+                print("\033[91m\033[1mCheckmate\033[0m")
+        if res == 2:
+            print("\033[93m\033[1mStalemate\033[0m")
+        return res
 
 
-def makeMove(start, end, promotion=5):
+def makeMove(start, end, promotion=5, isPromotion=False):
     global toPlay
     global board
     global movedPieces
@@ -75,6 +99,8 @@ def makeMove(start, end, promotion=5):
         else:
             fifty_move_counter -= 1
         madeMove = afterMove(board, movedPieces, start, end, promotion)
+        addState(board, movedPieces)
+        window.move([start, end, promotion], isPromotion)
         board = madeMove[0]
         movedPieces = madeMove[1]
         toPlay *= -1
@@ -84,16 +110,12 @@ def makeMove(start, end, promotion=5):
             messages.append("\033[93m\033[1mDrawn by fifty-move rule\033[0m")
         else:
             threefold_counter = 0
-            addState(board, movedPieces)
-            for i in range(len(saved_states)):
-                if sameState(board, movedPieces, i):
-                    threefold_counter += 1
-                if threefold_counter == 3:
-                    playing = False
-                    messages.append("\033[93m\033[1mDrawn by threefold repetition\033[0m")
-                    break
+            if num_repetitions(board, movedPieces, saved_states) >= 3:
+                playing = False
+                messages.append("\033[93m\033[1mDrawn by threefold repetition\033[0m")
     else:
         print("Invalid move")
+    threading.Thread(target=getNextMove).start()
 
 
 def inputMove(source):
@@ -101,6 +123,7 @@ def inputMove(source):
     if source == 0:
         myMove = []
         promotion = 5
+        isPromotion = False
         while not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
             inputStr = input("Move: ")
             try:
@@ -118,18 +141,23 @@ def inputMove(source):
                         print(eval(input("Command: ")))
                     except Exception as e:
                         print(str(e))
-        if ((board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7)) and inputStr.find("=") == -1:
-            promotion = 0
-            while not (2 <= promotion <= 5):
-                try:
-                    promotion = {"N": 2, "B": 3, "R": 4, "Q": 5}[input("N/B/R/Q: ").upper()]
-                except KeyError:
-                    print("Invalid promotion")
-        makeMove(myMove[0], myMove[1], promotion)
+        if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+            isPromotion = True
+            if inputStr.find("=") == -1:
+                promotion = 0
+                while not (2 <= promotion <= 5):
+                    try:
+                        promotion = {"N": 2, "B": 3, "R": 4, "Q": 5}[input("N/B/R/Q: ").upper()]
+                    except KeyError:
+                        print("Invalid promotion")
+        makeMove(myMove[0], myMove[1], promotion, isPromotion)
     if source == 1:
         print("Thinking...")
-        myMove = ai.minimax_ai(board, movedPieces, toPlay)
-        makeMove(myMove[0], myMove[1], myMove[2])
+        try:
+            myMove = ai.minimax_ai(board, movedPieces, toPlay)
+            makeMove(myMove[0], myMove[1], myMove[2])
+        except:
+            print("Error in move")
     if source == 2:
         print("Thinking...")
         myMove = ai.nn_ai(nn_model, board, movedPieces, saved_states, toPlay)
@@ -152,16 +180,31 @@ def sm():
     print("(opponent)")
     showMoves(board, movedPieces, toPlay*-1)
 
-os.system('clear')
-displayBoard(board, toPlay)
 playing = True
+def getNextMove():
+    global messages
+    global playing
+    global toPlay
 
-while playing:
-    inputMove(players[toPlay])
-    r = displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
-    for i in range(len(messages)):
-        print(messages[i])
-    messages = []
-    if not r == 0:
-        playing = False
-inputMove(0)
+    print("Playing", toPlay)
+
+    if playing:
+        inputMove(players[toPlay])
+        r = displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
+        for i in range(len(messages)):
+            print(messages[i])
+        messages = []
+        if not r == 0:
+            playing = False
+    if not playing:
+        inputMove(0)
+
+if __name__ == "__main__":
+    os.system('clear')
+    displayBoard(board, toPlay)
+    app = QApplication([])
+    window = ChessWindow()
+    threading.Thread(target=getNextMove).start()
+    QtCore.QCoreApplication.processEvents()
+    window.show()
+    sys.exit(app.exec())
