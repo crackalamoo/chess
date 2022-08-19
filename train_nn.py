@@ -3,7 +3,9 @@ from ai import *
 import tensorflow as tf
 import numpy as np
 
-BATCH_SIZE = 64
+print("Loaded modules")
+
+BATCH_SIZE = 256
 NUM_EPOCHS = 5
 TEST_SIZE = 20000
 
@@ -21,9 +23,10 @@ class TrainCallback(tf.keras.callbacks.Callback):
         print("test loss, test acc", results)
         print("")
 
-loaded_data = np.load("data/data.npz")
+loaded_data = np.load("data/data2000.npz")
 train_X = loaded_data['X']
 train_y = loaded_data['y']
+print("Loaded data")
 test_X = train_X[-TEST_SIZE:]
 test_y = train_y[-TEST_SIZE:]
 train_X = train_X[:-TEST_SIZE]
@@ -33,6 +36,7 @@ print(train_X.shape)
 print(train_y.shape)
 
 model = define_model()
+print("Built model")
 
 print("Evaluating model")
 results = model.evaluate(test_X, test_y, batch_size=BATCH_SIZE)

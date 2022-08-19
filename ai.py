@@ -8,52 +8,52 @@ import logging, os
 logging.disable(logging.WARNING)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+T_PLY = 4 # number of ply to look back
+
 def minimax_ai(b, mp, turn):
     #return chess.minimax(b, mp, turn, 2, {-1: 7500, 1: 7500}[turn], True)
     return chess.minimax(b, mp, turn, 2, 7500, True)
 
+def nn_ai(model, b, mp, states, turn):
+    vm = chess.validMoves(b, mp, turn)
+    vals = []
+    for move in vm:
+        newState = chess.afterMove(b, mp, move[0], move[1])
+        states.append(newState)
+        vals.append(turn*model.predict(np.expand_dims(ai_input(states), axis=0)))
+        states.pop(len(states)-1)
+    index = vals.index(max(vals))
+    return [vm[index][0], vm[index][1], 5]
+        
+
 def one_hot_board(b, mp):
-    wm = chess.validMoves(b, mp, 1) # white moves
-    bm = chess.validMoves(b, mp, -1) # black moves
+    #wm = chess.validMoves(b, mp, 1) # white moves
+    #bm = chess.validMoves(b, mp, -1) # black moves
     piece_board = np.asarray(b)
     piece_board -= 1
-    ohb = tf.one_hot(piece_board,14).numpy()
-    for i in range(len(wm)):
+    ohb = tf.one_hot(piece_board,12).numpy()
+    """for i in range(len(wm)):
         ohb[wm[i][1][0]][wm[i][1][1]][12] = 1
     for i in range(len(bm)):
-        ohb[bm[i][1][0]][bm[i][1][1]][13] = 1
+        ohb[bm[i][1][0]][bm[i][1][1]][13] = 1"""
     return ohb
 
-def define_model_old():
-    input = Input(shape=(8,8,14))
-    reg = L2(0.01)
-    """
-    h0 = Flatten()(input)
-    h0 = Dense(256, activation='relu')(h0)
-    h1 = Flatten()(inputOpponent)
-    h1 = Dense(256, activation='relu')(h1)
-    model = Concatenate(axis=1)([h0,h1])
-    """
-
-    model = Flatten()(input)
-    model = Dense(1024, activation='relu')(model)
-    model = Dropout(0.2)(model)
-    model = Dense(1024, activation='relu', kernel_regularizer=reg, bias_regularizer=reg)(model)
-    model = Dropout(0.2)(model)
-    model = Dense(32, activation='relu', kernel_regularizer=reg, bias_regularizer=reg)(model)
-    model = Dense(1, activation='sigmoid')(model) # probability white wins
-    model = Model(inputs=input, outputs=model)
-
-    model.compile(
-        optimizer="adam",
-        loss="binary_crossentropy",
-        metrics=["binary_accuracy"],
-    )
-
-    return model
+def ai_input(states):
+    inStates = []
+    for i in range(len(states)):
+        inStates.append(states[i])
+    while len(inStates) > T_PLY:
+        inStates.pop(0)
+    while len(inStates) < T_PLY:
+        inStates.insert(0, [chess.DEFAULT_BOARD, []])
+    input = one_hot_board(inStates[0][0], inStates[0][1])
+    for i in range(1, len(inStates)):
+        nextBoard = one_hot_board(inStates[i][0], inStates[i][1])
+        input = np.concatenate((input, nextBoard), axis=2)
+    return input
 
 def define_model():
-    input = Input(shape=(8,8,14))
+    input = Input(shape=(8,8,12*T_PLY))
     reg = L2(0.01)
 
     m0 = Conv2D(64, (1,1), padding='same')(input)
@@ -148,6 +148,3 @@ def debugBoard(b):
         for j in range(8):
             s += chess.piece_icons[int(b[i][j])]
         print(s)
-
-
-

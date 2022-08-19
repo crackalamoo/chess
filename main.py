@@ -6,13 +6,15 @@ import os
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 0, -1: 0}
+players = {1: 2, -1: 2}
 FLIP_BOARD = (players[-1] == 0)
 
 fifty_move_counter = 50
 threefold_counter = 0
 saved_states = []
 messages = []
+
+nn_model = ai.load_model()
 
 def sameState(b, mp, i):
     global saved_states
@@ -127,6 +129,10 @@ def inputMove(source):
     if source == 1:
         print("Thinking...")
         myMove = ai.minimax_ai(board, movedPieces, toPlay)
+        makeMove(myMove[0], myMove[1], myMove[2])
+    if source == 2:
+        print("Thinking...")
+        myMove = ai.nn_ai(nn_model, board, movedPieces, saved_states, toPlay)
         makeMove(myMove[0], myMove[1], myMove[2])
 def tupleMove(m):
     if not len(m) == 2 or not len(m[0]) == 2 or not len(m[1]) == 2:
