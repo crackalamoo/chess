@@ -7,8 +7,8 @@ NUM_GAMES = 20000
 
 train_X0 = [] # board states
 train_X1 = [] # extra info (threefold repetition)
-train_y0 = [] # policy
-train_y1 = [] # win probability
+train_y = [] # policy
+#train_y1 = [] # win probability
 
 
 def move_pgn(pgn, b, mp, turn):
@@ -35,10 +35,11 @@ def playGame(game, white, black, termination):
         sb = chess.afterMove(sb[0], sb[1], move[0], move[1], move[2])
         gameStates.append(sb)
         inp = ai_input(turn, gameStates)
-        train_X0.append(inp[0])
-        train_X1.append(inp[1])
-        train_y0.append(move_to_nn(move[0], move[1]))
-        train_y1.append(res*turn) # win for this player
+        if res == turn:
+            train_X0.append(inp[0])
+            train_X1.append(inp[1])
+            train_y.append(move_to_nn(move[0], move[1]))
+            #train_y1.append(res*turn) # win for this player
         turn *= -1
 def playGames(num):
     print("Playing through games")
@@ -52,7 +53,7 @@ def playGames(num):
             print(str(n)+"/"+str(num) + " ("+str(int(n/num*100))+"%)", end='\r')
         if n >= num:
             break
-    print("Played through " + str(n) + " games (" + str(len(train_y0)) + " positions)")
+    print("Played through " + str(n) + " games (" + str(len(train_y)) + " positions)")
 
 def movePrint(pgn, sb, turn):
     sb = move_pgn(pgn, sb[0], sb[1], turn)
@@ -63,12 +64,10 @@ playGames(NUM_GAMES)
 print("Saving data...")
 train_X0 = np.asarray(train_X0)
 train_X1 = np.asarray(train_X1)
-train_y0 = np.asarray(train_y0)
-train_y1 = np.asarray(train_y1)
+train_y = np.asarray(train_y)
 print(train_X0.shape)
 print(train_X1.shape)
-print(train_y0.shape)
-print(train_y1.shape)
+print(train_y.shape)
 
-np.savez_compressed("data/data", X0=train_X0, X1=train_X1, y0=train_y0, y1=train_y1)
+np.savez_compressed("data/data20000", X0=train_X0, X1=train_X1, y=train_y)
 print("Saved data")

@@ -19,10 +19,11 @@ FLIP_BOARD = (players[-1] == 0)
 
 fifty_move_counter = 50
 threefold_counter = 0
-saved_states = []
+saved_states = [[DEFAULT_BOARD, []]]
 messages = []
 
 nn_model = ai.load_model()
+#nn_model = ai.define_model()
     
 class ChessWindow(QMainWindow):
     def __init__(self):
@@ -32,12 +33,16 @@ class ChessWindow(QMainWindow):
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(10, 10, 880, 880)
         self.paint()
-    def paint(self, event=None):
-        svg = chess.svg.board(self.chessboard).encode("UTF-8")
+    def paint(self, event=None, move=None, flip=False, checkSquare=None):
+        if flip:
+            orientation = py_chess.BLACK
+        else:
+            orientation = py_chess.WHITE
+        svg = chess.svg.board(self.chessboard, orientation=orientation, lastmove=move, check=checkSquare).encode("UTF-8")
         self.widgetSvg.load(svg)
         self.widgetSvg.update()
         self.widgetSvg.show()
-    def move(self, move, isPromotion):
+    def move(self, move, isPromotion, flip, checkSquare):
         files = ['a','b','c','d','e','f','g','h']
         uci = ""
         uci += files[move[0][1]]
@@ -48,7 +53,7 @@ class ChessWindow(QMainWindow):
             uci += {2: 'n', 3: 'b', 4: 'r', 5: 'q'}[move[2]]
         move = py_chess.Move.from_uci(uci)
         self.chessboard.push(move)
-        self.paint()
+        self.paint(move=move, flip=flip, checkSquare=checkSquare)
 
 def addState(b, mp):
     global saved_states
@@ -75,15 +80,6 @@ def displayBoard(b, turn, flip=False):
                     s += piece_icons[b[i][j]]
                 print(s)
             print("     a  b  c  d  e  f  g  h")"""
-        res = gameRes(board, movedPieces, turn)
-        check = inCheck(board, movedPieces, turn)
-        if check:
-            print("\033[91mCheck\033[0m")
-            if res == 1:
-                print("\033[91m\033[1mCheckmate\033[0m")
-        if res == 2:
-            print("\033[93m\033[1mStalemate\033[0m")
-        return res
 
 
 def makeMove(start, end, promotion=5, isPromotion=False):
@@ -99,11 +95,29 @@ def makeMove(start, end, promotion=5, isPromotion=False):
         else:
             fifty_move_counter -= 1
         madeMove = afterMove(board, movedPieces, start, end, promotion)
-        addState(board, movedPieces)
-        window.move([start, end, promotion], isPromotion)
         board = madeMove[0]
         movedPieces = madeMove[1]
+        checkSquare = None
         toPlay *= -1
+        res = gameRes(board, movedPieces, toPlay)
+        check = inCheck(board, movedPieces, toPlay)
+        if check:
+            messages.append("\033[91mCheck\033[0m")
+            king = 6
+            if toPlay == -1:
+                king = 12
+            for i in range(8):
+                for j in range(8):
+                    if board[i][j] == king:
+                        checkSquare = py_chess.square(j, 7-i)
+            if res == 1:
+                messages.append("\033[91m\033[1mCheckmate\033[0m")
+                playing = False
+        if res == 2:
+            messages.append("\033[93m\033[1mStalemate\033[0m")
+            playing = False
+        window.move([start, end, promotion], isPromotion, toPlay==-1 and FLIP_BOARD, checkSquare)
+        addState(board, movedPieces)
         print("Made move", start, end)
         if (fifty_move_counter <= 0):
             playing = False
@@ -120,10 +134,10 @@ def makeMove(start, end, promotion=5, isPromotion=False):
 
 def inputMove(source):
     print({1: "White", -1: "Black"}[toPlay] + " to play")
+    isPromotion = False
     if source == 0:
         myMove = []
         promotion = 5
-        isPromotion = False
         while not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
             inputStr = input("Move: ")
             try:
@@ -134,7 +148,6 @@ def inputMove(source):
                 myMove = []
                 print("Error understanding move")
             if not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
-                displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
                 print("Invalid move")
                 if len(inputStr) > 0 and inputStr[0] == '/':
                     try:
@@ -155,13 +168,23 @@ def inputMove(source):
         print("Thinking...")
         try:
             myMove = ai.minimax_ai(board, movedPieces, toPlay)
-            makeMove(myMove[0], myMove[1], myMove[2])
+            if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+                isPromotion = True
+            makeMove(myMove[0], myMove[1], myMove[2], isPromotion)
         except:
             print("Error in move")
     if source == 2:
         print("Thinking...")
         myMove = ai.nn_ai(nn_model, board, movedPieces, saved_states, toPlay)
-        makeMove(myMove[0], myMove[1], myMove[2])
+        if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+            isPromotion = True
+        makeMove(myMove[0], myMove[1], myMove[2], isPromotion)
+    if source == 3:
+        print("Thinking...")
+        myMove = ai.mixed_ai(nn_model, board, movedPieces, saved_states, toPlay)
+        if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+            isPromotion = True
+        makeMove(myMove[0], myMove[1], myMove[2], isPromotion)
 def tupleMove(m):
     if not len(m) == 2 or not len(m[0]) == 2 or not len(m[1]) == 2:
         return ()
@@ -190,12 +213,10 @@ def getNextMove():
 
     if playing:
         inputMove(players[toPlay])
-        r = displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
+        displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
         for i in range(len(messages)):
             print(messages[i])
         messages = []
-        if not r == 0:
-            playing = False
     if not playing:
         inputMove(0)
 

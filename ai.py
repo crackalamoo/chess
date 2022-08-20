@@ -16,105 +16,114 @@ def minimax_ai(b, mp, turn):
     return chess.minimax(b, mp, turn, 2, 7500, True)
 
 def nn_ai(model, b, mp, states, turn):
-    root = monteCarlo(model, b, mp, states, turn, 20, 7.5)
-    index = root.select_child()[0]
+    child = monteCarlo(model, b, mp, turn, states, 7.5)
+    index = child.move
     m = nn_to_move(index)
     return [m[0], m[1], 5]
 
-def nn_result(model, b, mp, states, turn):
+def mixed_ai(model, b, mp, states, turn):
+    scores = nn_policy(model, b, mp, states, turn)
+    print(scores[np.argmax(scores)])
+    for i in range(len(scores)):
+        if not scores[i] == 0:
+            m = nn_to_move(i)
+            s = chess.afterMove(b, mp, m[0], m[1])
+            old_eval = chess.evalState(s[0], s[1])
+            nn_eval = 2.0/(1.0+np.power(10.0, -turn*old_eval))
+            #nn_eval *= np.power(2.0, -len(states)/10.0)
+            scores[i] += nn_eval
+    return nn_to_move(np.argmax(scores))
+
+def nn_policy(model, b, mp, states, turn):
     inp = ai_input(turn, states)
-    res = model.predict([np.expand_dims(inp[0],axis=0), np.expand_dims(inp[1],axis=0)])
-    policy = res[0].reshape(res[0].shape[1])
-    value = res[1].reshape(res[1].shape[1])
+    policy = model.predict([np.expand_dims(inp[0],axis=0), np.expand_dims(inp[1],axis=0)])[0]
     for i in range(len(policy)):
         m = nn_to_move(i)
         if not chess.validMove(b, mp, m[0], m[1], turn):
             policy[i] = 0
-    if np.sum(policy) == 0:
-        if chess.inCheck(b, mp, turn):
-            value = -1
-        else:
-            value = 0
-    else:
+    if not np.sum(policy) == 0:
         policy /= np.sum(policy)
-    return policy, value
+    return policy
 
-def ucb(parent, child):
-    prior_score = child.prior * np.sqrt(parent.visits)/(child.visits+1)
-    value_score = -child.value()
-    return value_score + prior_score
 class Node:
-    def __init__(self, prior, turn):
-        self.visits = 0
-        self.turn = turn
-        self.prior = prior
-        self.value_sum = 0
+    def __init__(self, m, p):
+        self.move = m
+        self.parent = p
         self.children = {}
-        self.state = None
-    def expanded(self):
-        return (len(self.children) > 0)
-    def value(self):
+        self.val_sum = 0
+        self.visits = 0
+        self.is_leaf = True
+        self.worstVal = 0
+    def expand(self, b, mp, turn):
+        vm = chess.validMoves(b, mp, turn)
+        for i in range(len(vm)):
+            m = move_to_nn(vm[i][0], vm[i][1], False)
+            nc = Node(m, self)
+            self.children[m] = nc
+        if not len(vm) == 0:
+            self.is_leaf = False
+    def update(self, val):
+        self.val_sum += val
+        self.worstVal = min(self.worstVal, val)
+        self.visits += 1
+    def has_parent(self):
+        return self.parent is not None
+    def evaluate(self):
         if self.visits == 0:
-            return 0
-        return self.value_sum / self.visits
-    def select_action(self, temperature):
-        visit_counts = np.array([child.visit_count for child in self.children.values()])
-        actions = [action for action in self.children.keys()]
-        if temperature == 0:
-            action = actions[np.argmax(visit_counts)]
-        elif temperature == float("inf"):
-            action = np.random.choice(actions)
-        else:
-            visit_counts = visit_counts ** (1/temperature)
-            visit_counts /= sum(visit_counts)
-            action = np.random.choice(actions, p=visit_counts)
-        return action
-    def select_child(self):
-        best = -np.inf
-        index = -1
-        pick = None
-        for action, child in self.children.items():
-            score = ucb(self, child)
-            if score > best:
-                best = score
-                index = action
-                pick = child
-        return index, pick
-    def expand(self, state, turn, priors):
-        self.turn = turn
-        self.state = state
-        for a, p in enumerate(priors):
-            if not p == 0:
-                self.children[a] = Node(p, turn*-1)
+            return -4
+        return self.val_sum/self.visits+0.5*self.worstVal+0.1*np.log(self.visits)
+    def visit_child(self, model, turn, states):
+        lastState = states[len(states)-1]
+        uct = nn_policy(model, lastState[0], lastState[1], states, turn)
+        uct[uct == 0] -= 10
+        uct *= 1.5
+        for key in self.children.keys():
+            child = self.children[key]
+            #m = nn_to_move(key)
+            if child.visits > 0:
+                uct[key] += np.sqrt(2*np.log(self.visits+1)/(child.visits))
+                uct[key] += child.val_sum/child.visits
+            #if not chess.validMove(lastState[0], lastState[1], m[0], m[1], turn):
+            #    uct[key] = uct[np.argmin(uct)]
+        visit = np.argmax(uct)
+        return self.children[visit]
+    def best_child(self, b, mp, turn):
+        val = -np.inf
+        best = None
+        for child in self.children.values():
+            if child.visits > 0 and child.evaluate() > val:
+                val = child.evaluate()
+                best = child
+        return best
 
-def monteCarlo(model, b, mp, states, turn, sims, timeLimit):
+
+def monteCarlo(model, b, mp, turn, states, timeLimit):
     startTime = time.time()
-    root = Node(0, turn)
-    priors, value = nn_result(model, b, mp, states, turn)
-    root.expand([b,mp], turn, priors)
-    for i in range(sims):
+    root = Node(None, None)
+    while time.time() - startTime < timeLimit:
+        t = turn
         node = root
-        path = [node]
-        while node.expanded() and len(path) < 10 and time.time() - startTime < timeLimit:
-            action, node = node.select_child()
-            path.append(node)
-        parent = path[-2]
-        state = parent.state
-        m = nn_to_move(action)
-        nextState = chess.afterMove(state[0], state[1], m[0], m[1])
-        states.append(nextState)
-        outcome = chess.gameRes(nextState[0], nextState[1], parent.turn*-1)
-        # value means chance of win for the player whose move it is at nextState
-        priors, value = nn_result(model, nextState[0], nextState[1], states, parent.turn*-1)
-        states.pop(len(states)-1)
-        if outcome == 0 and time.time() - startTime < timeLimit:
-            node.expand(nextState, parent.turn*-1, priors)
-        for node in reversed(path):
-            node.value_sum += value*node.turn*turn
-            node.visits += 1
-        if time.time() - startTime >= timeLimit:
-            break
-    return root
+        sim_states = []
+        for i in range(len(states)):
+            sim_states.append(states[i])
+        curr_state = sim_states[len(sim_states)-1]
+        while not node.is_leaf:
+            node = node.visit_child(model, t, sim_states)
+            nm = nn_to_move(node.move)
+            curr_state = chess.afterMove(curr_state[0], curr_state[1], nm[0], nm[1])
+            sim_states.append(curr_state)
+            t *= -1
+        node.expand(curr_state[0], curr_state[1], t)
+        result = chess.gameRes(curr_state[0], curr_state[1], t)
+        if result == 0:
+            old_eval = chess.evalState(curr_state[0], curr_state[1])
+            result = -3/(1.0+np.power(10, turn*old_eval/400.0))
+        else:
+            result = {1: -5*t*turn, 2: -1.5}[result]
+        while node.has_parent():
+            node.update(result)
+            node = node.parent
+    return root.best_child(b, mp, turn)
 
 
     
@@ -147,10 +156,12 @@ def ai_input(turn, states):
     input2 = np.asarray([turn, chess.num_repetitions(currState[0], currState[1], states)]).astype(int)
     return [input, input2]
 
-def move_to_nn(start, end):
+def move_to_nn(start, end, tensor=True):
     nn = (start[0]*8+start[1])*(56+8) # 56 queen moves and 8 knight moves from each square
     nn += end[0]*8+end[1]
-    return tf.one_hot(nn, 4096)
+    if tensor:
+        return tf.one_hot(nn, 4096)
+    return nn
 def nn_to_move(nn):
     e1 = nn%8
     nn -= e1
@@ -162,7 +173,7 @@ def nn_to_move(nn):
     nn -= s0
     return [[int(s0/512),int(s1/64)], [int(e0/8),int(e1)], 5]
 
-def define_model():
+def define_model(valModel=False):
     input = Input(shape=(8,8,12*T_PLY))
     input2 = Input(shape=(2,))
     reg = L2(0.01)
@@ -181,14 +192,20 @@ def define_model():
     m3 = GlobalAveragePooling2D()(m3)
 
     hidden = Concatenate(axis=1)([m0,m1,m2,m3,input2])
-    policy = Dense(4096, activation='softmax')(hidden)
-    value = Dense(32, activation='relu')(hidden)
-    value = Dense(1, activation='tanh')(value)
-    model = Model(inputs=[input, input2], outputs=[policy, value])
+    policy = Dense(1024, activation='relu')(hidden)
+    policy = Dense(4096, activation='softmax')(policy)
+    if valModel:
+        value = Dense(32, activation='relu')(hidden)
+        value = Dense(1, activation='tanh')(value)
+        model = Model(inputs=[input, input2], outputs=[policy, value])
+        losses = ["categorical_crossentropy", "mse"]
+    else:
+        model = Model(inputs=[input, input2], outputs=[policy])
+        losses = ["categorical_crossentropy"]
 
     model.compile(
         optimizer="adam",
-        loss=["categorical_crossentropy", "mse"],
+        loss=losses,
         metrics=["accuracy"],
     )
 
