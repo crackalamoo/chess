@@ -36,7 +36,7 @@ def cppMoved(mp):
     for i in range(8):
         row = []
         for j in range(8):
-            if (i,j) in mp:
+            if [i,j] in mp:
                 row.append(1)
             else:
                 row.append(0)
@@ -66,9 +66,9 @@ def pythonMoved(state):
     lastMoved.append(state.lastMoved[1])
     for i in range(8):
         for j in range(8):
-            if state.moved[i][j] == 1 and not (i,j) == (lastMoved[0],lastMoved[1]):
-                mp.append((i,j))
-    mp.append((lastMoved[0],lastMoved[1]))
+            if state.moved[i][j] == 1 and not [i,j] == [lastMoved[0],lastMoved[1]]:
+                mp.append([i,j])
+    mp.append([lastMoved[0],lastMoved[1]])
     return mp
 
 

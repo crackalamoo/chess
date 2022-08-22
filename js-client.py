@@ -10,6 +10,8 @@ app = Flask(__name__)
  
 from flask import jsonify, request, render_template
 
+nn_model = ai.load_model()
+
 def arg_to_square(arg):
     s = [int(arg[0]), int(arg[1])]
     return s
@@ -25,15 +27,15 @@ def arg_to_moved(arg):
     arg = arg.split("_")
     mp = []
     for i in range(len(arg)):
-        if len(arg[i]) == 2:
+        if not arg[i] == '':
             mp.append(arg_to_square(arg[i]))
     return mp
 def arg_to_states(arg):
     arg = arg.split("S")
     states = []
-    for a in arg:
-        if len(a) > 0:
-            state = a.split("s")
+    for i in range(len(arg)):
+        if arg[i] != '':
+            state = arg[i].split("s")
             states.append([arg_to_board(state[0]), arg_to_moved(state[1])])
     return states
 
@@ -46,7 +48,18 @@ def js_minimax():
     b = arg_to_board(request.args.get('board'))
     mp = arg_to_moved(request.args.get('moved'))
     turn = int(request.args.get('turn'))
-    res = ai.minimax_ai(b, mp, turn)
+    time = int(request.args.get('time'))
+    res = ai.minimax_ai(b, mp, turn, time)
+    return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
+
+@app.route('/nn')
+def js_nn():
+    b = arg_to_board(request.args.get('board'))
+    mp = arg_to_moved(request.args.get('moved'))
+    states = arg_to_states(request.args.get('states'))
+    turn = int(request.args.get('turn'))
+    time = int(request.args.get('time'))
+    res = ai.nn_ai(nn_model, b, mp, states, turn, time)
     return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
 
 @app.route('/validmoves')
@@ -73,12 +86,11 @@ def js_makeMove():
         else:
             fifty_count -= 1
         madeMove = afterMove(b, mp, start, end, promotion)
-        b = madeMove[0]
-        mp = madeMove[1]
+        states.append([madeMove[0],madeMove[1]])
         checkSquare = [-1,-1]
         turn *= -1
-        res = gameRes(b, mp, turn)
-        check = inCheck(b, mp, turn)
+        res = gameRes(madeMove[0], madeMove[1], turn)
+        check = inCheck(madeMove[0], madeMove[1], turn)
         if check:
             messages.append("Check")
             king = 6
@@ -95,12 +107,12 @@ def js_makeMove():
         if (fifty_count <= 0):
             messages.append("Drawn by fifty-move rule")
             res = 2
-        elif num_repetitions(b, mp, states) >= 3:
+        elif num_repetitions(madeMove[0], madeMove[1], states) >= 3:
             messages.append("Drawn by threefold repetition")
             res = 2
-        return jsonify({"board": b, "moved": mp, "res": res, "check": checkSquare, "fifty": fifty_count, "messages": messages})
+        return jsonify({"board": madeMove[0], "moved": madeMove[1], "res": res, "check": checkSquare, "fifty": fifty_count, "messages": messages})
     else:
-        return jsonify({"res": -1})
+        return jsonify({"res": -2})
 
 
 

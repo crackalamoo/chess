@@ -10,6 +10,34 @@
 </head>
 <body>
 <h1>Chess</h1>
+<form name="settings" action="javascript:void(0)">
+White: <select name="white">
+    <option value="0" selected>Human</option>
+    <option value="1">AI (minimax)</option>
+    <option value="2">AI (neural network)</option>
+</select><br>
+Black: <select name="black">
+    <option value="0">Human</option>
+    <option value="1" selected>AI (minimax)</option>
+    <option value="2">AI (neural network)</option>
+</select><br>
+Time: <select name="time">
+    <option value="1">1</option>
+    <option value="3">3</option>
+    <option value="5">5</option>
+    <option value="10" selected>10</option>
+    <option value="15">15</option>
+    <option value="30">30</option>
+    <option value="-100">Unlimited</option>
+</select><br>
+Increment: <select name="increment">
+    <option value="0">0</option>
+    <option value="1">1</option>
+    <option value="5">5</option>
+    <option value="10">10</option>
+</select><br>
+<button action="javascript:void(0)" onclick="startFromForm()">Start</button>
+</form>
 <div id="boardHolder">
 <canvas id="board"></canvas>
 </div>
