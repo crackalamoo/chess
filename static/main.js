@@ -136,6 +136,8 @@ async function makeMove(start, end, promotion) {
             drawBoard();
             if (res == 0)
                 getNextMove();
+            for (var i = 0; i < msg.length; i++)
+                console.log(msg[i]);
         } else {
             console.log(board);
             console.log(start);
