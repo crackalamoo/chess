@@ -10,28 +10,20 @@ logging.disable(logging.WARNING)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 T_PLY = 4 # number of ply to analyze
-
+ 
 def minimax_ai(b, mp, turn):
     #return chess.minimax(b, mp, turn, 2, {-1: 7500, 1: 7500}[turn], True)
     return chess.minimax(b, mp, turn, 2, 7500, True)
 
 def nn_ai(model, b, mp, states, turn):
-    child = monteCarlo(model, b, mp, turn, states, 7.5)
+    child = monteCarlo(model, b, mp, turn, states, 5.0)
     index = child.move
     m = nn_to_move(index)
     return [m[0], m[1], 5]
 
-def mixed_ai(model, b, mp, states, turn):
+def policy_ai(model, b, mp, states, turn):
     scores = nn_policy(model, b, mp, states, turn)
     print(scores[np.argmax(scores)])
-    for i in range(len(scores)):
-        if not scores[i] == 0:
-            m = nn_to_move(i)
-            s = chess.afterMove(b, mp, m[0], m[1])
-            old_eval = chess.evalState(s[0], s[1])
-            nn_eval = 2.0/(1.0+np.power(10.0, -turn*old_eval))
-            #nn_eval *= np.power(2.0, -len(states)/10.0)
-            scores[i] += nn_eval
     return nn_to_move(np.argmax(scores))
 
 def nn_policy(model, b, mp, states, turn):
@@ -71,17 +63,17 @@ class Node:
     def evaluate(self):
         if self.visits == 0:
             return -4
-        return self.val_sum/self.visits+0.5*self.worstVal+0.1*np.log(self.visits)
+        return self.val_sum/self.visits+0.5*self.worstVal+0.5*np.log(self.visits)
     def visit_child(self, model, turn, states):
         lastState = states[len(states)-1]
         uct = nn_policy(model, lastState[0], lastState[1], states, turn)
         uct[uct == 0] -= 10
-        uct *= 1.5
         for key in self.children.keys():
             child = self.children[key]
             #m = nn_to_move(key)
             if child.visits > 0:
-                uct[key] += np.sqrt(2*np.log(self.visits+1)/(child.visits))
+                #uct[key] += np.sqrt(2*np.log(self.visits+1)/(child.visits))
+                uct[key] *= np.sqrt(2*np.log(self.visits+1)/(child.visits))
                 uct[key] += child.val_sum/child.visits
             #if not chess.validMove(lastState[0], lastState[1], m[0], m[1], turn):
             #    uct[key] = uct[np.argmin(uct)]
@@ -117,9 +109,9 @@ def monteCarlo(model, b, mp, turn, states, timeLimit):
         result = chess.gameRes(curr_state[0], curr_state[1], t)
         if result == 0:
             old_eval = chess.evalState(curr_state[0], curr_state[1])
-            result = -3/(1.0+np.power(10, turn*old_eval/400.0))
+            result = -2/(1.0+np.power(10, turn*old_eval/400.0))+1
         else:
-            result = {1: -5*t*turn, 2: -1.5}[result]
+            result = {1: -5*t*turn, 2: 0}[result]
         while node.has_parent():
             node.update(result)
             node = node.parent
@@ -156,6 +148,7 @@ def ai_input(turn, states):
     input2 = np.asarray([turn, chess.num_repetitions(currState[0], currState[1], states)]).astype(int)
     return [input, input2]
 
+
 def move_to_nn(start, end, tensor=True):
     nn = (start[0]*8+start[1])*(56+8) # 56 queen moves and 8 knight moves from each square
     nn += end[0]*8+end[1]
@@ -173,7 +166,7 @@ def nn_to_move(nn):
     nn -= s0
     return [[int(s0/512),int(s1/64)], [int(e0/8),int(e1)], 5]
 
-def define_model(valModel=False):
+def define_old_model(valModel=False):
     input = Input(shape=(8,8,12*T_PLY))
     input2 = Input(shape=(2,))
     reg = L2(0.01)
@@ -206,6 +199,46 @@ def define_model(valModel=False):
     model.compile(
         optimizer="adam",
         loss=losses,
+        metrics=["accuracy"],
+    )
+
+    print(model.summary())
+
+    return model
+
+
+def residual_block(x, kernel, filters, reg):
+    fx = Conv2D(filters, kernel, activation='relu', padding='same')(x)
+    fx = BatchNormalization()(fx)
+    fx = Conv2D(filters, kernel, padding='same', kernel_regularizer=reg, bias_regularizer=reg)(fx)
+    out = tf.keras.layers.Add()([x,fx])
+    out = tf.keras.layers.ReLU()(out)
+    out = BatchNormalization()(out)
+    return out
+
+def define_model():
+    input = Input(shape=(8,8,12*T_PLY))
+    input2 = Input(shape=(2,))
+    reg = L2(0.01)
+
+    b = input[:,:,:,12*(T_PLY-1):]
+    b = Flatten()(b)
+    r0 = residual_block(input, (3,3), 12*T_PLY, reg)
+    r1 = residual_block(input, (5,5), 12*T_PLY, reg)
+    for i in range(4):
+        r0 = residual_block(r0, (3,3), 12*T_PLY, reg)
+        r1 = residual_block(r1, (5,5), 12*T_PLY, reg)
+    r0 = GlobalAveragePooling2D()(r0)
+    r1 = GlobalAveragePooling2D()(r1)
+
+    #conv = Concatenate(axis=1)([r0,r1])
+    hidden = Concatenate(axis=1)([r0,r1,b,input2])
+    policy = Dense(4096, activation='softmax')(hidden)
+
+    model = Model(inputs=[input, input2], outputs=[policy])
+    model.compile(
+        optimizer="adam",
+        loss="categorical_crossentropy",
         metrics=["accuracy"],
     )
 

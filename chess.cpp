@@ -569,6 +569,21 @@ extern "C" int evaluateState(GameState state) {
             }
         }
     }
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            switch (state.board[i][j]) {
+                case 2:
+                case 3:
+                case 4:
+                    val += 16-myAbs(blackKingSquare[0] - i)-myAbs(blackKingSquare[1] - j); break;
+                case 8:
+                case 9:
+                case 10:
+                    val -= 16-myAbs(whiteKingSquare[0] - i)-myAbs(whiteKingSquare[1] - j); break;
+                default: break;
+            }
+        }
+    }
     if (val > 350) {
         square choices[8] = {{blackKingSquare[0]+1,blackKingSquare[1]},{blackKingSquare[0]-1,blackKingSquare[1]},{blackKingSquare[0],blackKingSquare[1]+1},{blackKingSquare[0],blackKingSquare[1]-1},
             {blackKingSquare[0]+1,blackKingSquare[1]+1},{blackKingSquare[0]+1,blackKingSquare[1]-1},{blackKingSquare[0]-1,blackKingSquare[1]+1},{blackKingSquare[0]-1,blackKingSquare[1]-1}};
@@ -659,7 +674,7 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
                     nextDepth += 1;
             }
         }
-        int curr_val = -1*alphaBeta(newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit)*pow(0.95, root->trueDepth-trueDepth);
+        int curr_val = -1*alphaBeta(newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit)*pow(0.9, root->trueDepth-trueDepth);
         if (curr_val > value) {
             value = curr_val;
             if (trueDepth == root->depth) {
@@ -679,7 +694,7 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
     }
     root->trueDepth = min(root->trueDepth, trueDepth);
     if (trueDepth == root->depth)
-        cout << " Anticipated value: " << value << endl;
+        cout << "Anticipated value: " << value << endl;
     return value;
 
 }
@@ -699,11 +714,9 @@ extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=t
     root->trueDepth = searchDepth;
     root->material = evaluateMaterial(s);
     int score0 = evaluateState(s);
-    cout << "turn: " << turn << endl;
     cout << "score: " << score0 << endl;
     start_calc = get_millis();
     alphaBeta(s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
-    cout << "to depth " << root->trueDepth << endl;
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
     cout << "res = " << res << endl;
     delete root;

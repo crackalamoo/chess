@@ -6,10 +6,10 @@ import numpy as np
 print("Loaded modules")
 
 BATCH_SIZE = 256
-NUM_EPOCHS = 1 # 35+10+6 so far
-TEST_SIZE = 50000
-DATA_FILE = "data/data.npz"
-LOAD_MODEL = True
+NUM_EPOCHS = 1 # 1 so far
+TEST_SIZE = 10000
+DATA_FILE = "data/data2000.npz"
+LOAD_MODEL = False
 
 class TrainCallback(tf.keras.callbacks.Callback):
     def __init__(self, m, tX0, tX1, ty):

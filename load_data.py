@@ -3,7 +3,7 @@ import chess_core as chess
 import tensorflow as tf
 from ai import pgn_to_move, ai_input, move_to_nn
 
-NUM_GAMES = 20000
+NUM_GAMES = 2#20000
 
 train_X0 = [] # board states
 train_X1 = [] # extra info (threefold repetition)
@@ -39,6 +39,8 @@ def playGame(game, white, black, termination):
             train_X0.append(inp[0])
             train_X1.append(inp[1])
             train_y.append(move_to_nn(move[0], move[1]))
+            print(move)
+            print(move_to_nn(move[0], move[1], False))
             #train_y1.append(res*turn) # win for this player
         turn *= -1
 def playGames(num):
@@ -69,5 +71,5 @@ print(train_X0.shape)
 print(train_X1.shape)
 print(train_y.shape)
 
-np.savez_compressed("data/data20000", X0=train_X0, X1=train_X1, y=train_y)
+np.savez_compressed("data/data1", X0=train_X0, X1=train_X1, y=train_y)
 print("Saved data")
