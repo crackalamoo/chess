@@ -19,9 +19,9 @@ const int PAWN_MAP[8][8] = {{90, 90, 90, 90, 90, 90, 90, 90},
                             {60, 50, 50, 50, 50, 50, 50, 60},
                             {10, 10, 20, 30, 30, 20, 10, 10},
                             {5,  5, 10, 25, 25, 10,  5,  5},
-                            {0,  0,  0, 20, 20,  0,  0,  0},
+                            {0,  0,  0, 25, 25,  0,  0,  0},
                             {5, -5,-10,  0,  0,-10, -5,  5},
-                            {5, 15, 10,-30,-30, 10, 15,  5},
+                            {10, 5, 10,-20,-20, 10,  5, 10},
                             {0,  0,  0,  0,  0,  0,  0,  0}};
 const int KNIGHT_MAP[8][8]={{-50,-40,-30,-30,-30,-30,-40,-50},
                             {-40,-20,  0,  0,  0,  0,-20,-40},
@@ -33,12 +33,12 @@ const int KNIGHT_MAP[8][8]={{-50,-40,-30,-30,-30,-30,-40,-50},
                             {-50,-40,-30,-30,-30,-30,-40,-50}};
 const int BISHOP_MAP[8][8]={{-20,-10,-10,-10,-10,-10,-10,-20},
                             {-10,  0,  0,  0,  0,  0,  0,-10},
-                            {-10,  0,  5, 10, 10,  5,  0,-10},
-                            {-10,  5, 10, 10, 10, 10,  5,-10},
-                            {-10,  0, 10, 10, 10, 10,  0,-10},
-                            {-10, 10, 10, 10, 10, 10, 10,-10},
-                            {-10,  5,  0,  0,  0,  0,  5,-10},
-                            {-20,-10,-10,-10,-10,-10,-10,-20}};
+                            {-10, -5,  5, 10, 10,  5, -5,-10},
+                            {-10,  5, 25, 20, 20, 25,  5,-10},
+                            {-10,  0, 25, 25, 25, 25,  0,-10},
+                            {-10, 10, 10, 15, 15, 10, 10,-10},
+                            {-10,  5,  0,  5,  5,  0,  5,-10},
+                            {-20,-10,-20,-10,-10,-20,-10,-20}};
 const int ROOK_MAP[8][8] = {{ 0,  0,  0,  0,  0,  0,  0,  0},
                             { 5, 10, 10, 10, 10, 10, 10,  5},
                             {-5,  0,  0,  0,  0,  0,  0, -5},
@@ -61,8 +61,8 @@ const int KING_MAP[8][8] = {{-30,-40,-40,-50,-50,-40,-40,-30},
                             {-30,-40,-40,-50,-50,-40,-40,-30},
                             {-20,-30,-30,-40,-40,-30,-30,-20},
                             {-10,-20,-20,-20,-20,-20,-20,-10},
-                            { 10, 10,-10,-10,-10,-10, 10, 10},
-                            { 20, 30, 25,  0,  0, 10, 40, 20}};
+                            {  0,  0,-15,-15,-15,-15,  0,  0},
+                            { 20, 30, 35,  0,  0, 10, 40, 20}};
 const int KING_MAP_ENDGAME[8][8] = {{-50,-40,-30,-20,-20,-30,-40,-50},
                                     {-30,-20,-10,  0,  0,-10,-20,-30},
                                     {-30,-10, 20, 30, 30, 20,-10,-30},
@@ -386,58 +386,151 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
 vector<vector<int> > validMoves(GameState state, int turn) {
     vector< vector<int> > moves;
     vector<int> m;
+    int wpm[][2] = {{-1,-1},{-1,1},{-1,0},{-2,0}};
+    int bpm[][2] = {{1,-1},{1,1},{1,0},{2,0}};
+    int km[][2] = {{2,1},{2,-1},{1,2},{1,-2},{-1,2},{-1,-2},{-2,1},{-2,-1}};
+    int rm[][2] = {{1,0},{0,1},{-1,0},{0,-1}};
+    int cm[][2] = {{1,1},{1,-1},{-1,1},{-1,-1},{1,0},{0,1},{-1,0},{0,-1},{0,2},{0,-2}};
     for (int i0 = 0; i0 < 8; i0++) {
         for (int j0 = 0; j0 < 8; j0++) {
             int i = RANK_SEARCH[i0];
             int j = FILE_SEARCH[j0];
+            square startPos = {i,j};
             if (PIECE_SIDE[state.board[i][j]] == turn) {
                 int piece = state.board[i][j];
-                vector< vector<int> > directions;
-                int steps = 1;
-                square startPos = {i,j};
+                vector<int> m;
                 switch(piece) {
                     case 1:
-                        directions = dirHolder.whitePawnMoves;
+                        for (int k = 0; k < 4; k++) {
+                            square end = {i+wpm[k][0],j+wpm[k][1]};
+                            if (validMove(state, startPos, end, turn)) {
+                                m.clear();
+                                m.push_back(startPos[0]);
+                                m.push_back(startPos[1]);
+                                m.push_back(end[0]);
+                                m.push_back(end[1]);
+                                moves.push_back(m);
+                            }
+                        }
                         break;
                     case 7:
-                        directions = dirHolder.blackPawnMoves;
+                        for (int k = 0; k < 4; k++) {
+                            square end = {i+bpm[k][0],j+bpm[k][1]};
+                            if (validMove(state, startPos, end, turn)) {
+                                m.clear();
+                                m.push_back(startPos[0]);
+                                m.push_back(startPos[1]);
+                                m.push_back(end[0]);
+                                m.push_back(end[1]);
+                                moves.push_back(m);
+                            }
+                        }
                         break;
                     case 2:
                     case 8:
-                        directions = dirHolder.knightMoves;
-                        break;
-                    case 3:
-                    case 9:
-                        directions = dirHolder.bishopMoves;
-                        steps = 7;
-                        break;
-                    case 4:
-                    case 10:
-                        directions = dirHolder.rookMoves;
-                        steps = 7;
+                        for (int k = 0; k < 8; k++) {
+                            square end = {i+km[k][0],j+km[k][1]};
+                            if (validMove(state, startPos, end, turn)) {
+                                m.clear();
+                                m.push_back(startPos[0]);
+                                m.push_back(startPos[1]);
+                                m.push_back(end[0]);
+                                m.push_back(end[1]);
+                                moves.push_back(m);
+                            }
+                        }
                         break;
                     case 6:
                     case 12:
-                        directions = addDirection(directions, dirHolder.castleMoves);
-                        directions = addDirection(directions, dirHolder.queenMoves);
-                        break;
-                    case 5:
-                    case 11:
-                        directions = dirHolder.queenMoves;
-                        steps = 7;
+                        for (int k = 0; k < 10; k++) {
+                            square end = {i+cm[k][0],j+cm[k][1]};
+                            if (validMove(state, startPos, end, turn)) {
+                                m.clear();
+                                m.push_back(startPos[0]);
+                                m.push_back(startPos[1]);
+                                m.push_back(end[0]);
+                                m.push_back(end[1]);
+                                moves.push_back(m);
+                            }
+                        }
                         break;
                 }
-                for (int d = 0; d < directions.size(); d++) {
-                    square pos = {i,j};
-                    for (int k = 0; k < steps; k++) {
-                        pos[0] += directions.at(d).at(0);
-                        pos[1] += directions.at(d).at(1);
-                        if (validMove(state, startPos, pos, turn)) {
+                if (piece == 3 || piece == 5 || piece == 9 || piece == 11) {
+                    for (int k = 1; k <= 7; k++) {
+                        square se = {i+k,j+k};
+                        square sw = {i+k,j-k};
+                        square ne = {i-k,j+k};
+                        square nw = {i-k,j-k};
+                        if (validMove(state, startPos, se, turn)) {
                             m.clear();
                             m.push_back(startPos[0]);
                             m.push_back(startPos[1]);
-                            m.push_back(pos[0]);
-                            m.push_back(pos[1]);
+                            m.push_back(se[0]);
+                            m.push_back(se[1]);
+                            moves.push_back(m);
+                        }
+                        if (validMove(state, startPos, sw, turn)) {
+                            m.clear();
+                            m.push_back(startPos[0]);
+                            m.push_back(startPos[1]);
+                            m.push_back(sw[0]);
+                            m.push_back(sw[1]);
+                            moves.push_back(m);
+                        }
+                        if (validMove(state, startPos, ne, turn)) {
+                            m.clear();
+                            m.push_back(startPos[0]);
+                            m.push_back(startPos[1]);
+                            m.push_back(ne[0]);
+                            m.push_back(ne[1]);
+                            moves.push_back(m);
+                        }
+                        if (validMove(state, startPos, nw, turn)) {
+                            m.clear();
+                            m.push_back(startPos[0]);
+                            m.push_back(startPos[1]);
+                            m.push_back(nw[0]);
+                            m.push_back(nw[1]);
+                            moves.push_back(m);
+                        }
+                    }
+                }
+                if (piece == 4 || piece == 5 || piece == 10 || piece == 11) {
+                    for (int k = 1; k <= 7; k++) {
+                        square s = {i+k,j};
+                        square n = {i-k,j};
+                        square e = {i,j+k};
+                        square w = {i,j-k};
+                        if (validMove(state, startPos, n, turn)) {
+                            m.clear();
+                            m.push_back(startPos[0]);
+                            m.push_back(startPos[1]);
+                            m.push_back(n[0]);
+                            m.push_back(n[1]);
+                            moves.push_back(m);
+                        }
+                        if (validMove(state, startPos, s, turn)) {
+                            m.clear();
+                            m.push_back(startPos[0]);
+                            m.push_back(startPos[1]);
+                            m.push_back(s[0]);
+                            m.push_back(s[1]);
+                            moves.push_back(m);
+                        }
+                        if (validMove(state, startPos, e, turn)) {
+                            m.clear();
+                            m.push_back(startPos[0]);
+                            m.push_back(startPos[1]);
+                            m.push_back(e[0]);
+                            m.push_back(e[1]);
+                            moves.push_back(m);
+                        }
+                        if (validMove(state, startPos, w, turn)) {
+                            m.clear();
+                            m.push_back(startPos[0]);
+                            m.push_back(startPos[1]);
+                            m.push_back(w[0]);
+                            m.push_back(w[1]);
                             moves.push_back(m);
                         }
                     }
@@ -533,26 +626,44 @@ extern "C" int evaluateState(GameState state) {
     int val = 0;
     square whiteKingSquare;
     square blackKingSquare;
+    int whiteBishops;
+    int blackBishops;
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             int piece = state.board[i][j];
             val += PIECE_VAL[piece];
+            if (state.moved[i][j]) {
+                if (piece == 2 || piece == 3)
+                    val += 35;
+                if (piece == 8 || piece == 9)
+                    val -= 35;
+                if (piece == 5 || piece == 6)
+                    val -= 25;
+                if (piece == 11 || piece == 12)
+                    val += 25;
+            }
             switch(piece) {
                 case 0: break;
                 case 1: val += PAWN_MAP[i][j]; break;
                 case 2: val += KNIGHT_MAP[i][j]; break;
-                case 3: val += BISHOP_MAP[i][j]; break;
+                case 3:
+                    val += BISHOP_MAP[i][j];
+                    whiteBishops++;
+                    break;
                 case 4: val += ROOK_MAP[i][j]; break;
                 case 5: val += QUEEN_MAP[i][j]; break;
                 case 7: val -= PAWN_MAP[7-i][j]; break;
                 case 8: val -= KNIGHT_MAP[7-i][j]; break;
-                case 9: val -= BISHOP_MAP[7-i][j]; break;
+                case 9:
+                    val -= BISHOP_MAP[7-i][j];
+                    blackBishops++;
+                    break;
                 case 10: val -= ROOK_MAP[7-i][j]; break;
                 case 11: val -= QUEEN_MAP[7-i][j]; break;
                 case 6:
                     whiteKingSquare[0] = i;
                     whiteKingSquare[1] = j;
-                    if (endgameState(state) || val > 350)
+                    if (endgameState(state))
                         val += KING_MAP_ENDGAME[i][j];
                     else
                         val += KING_MAP[i][j];
@@ -560,7 +671,7 @@ extern "C" int evaluateState(GameState state) {
                 case 12:
                     blackKingSquare[0] = i;
                     blackKingSquare[1] = j;
-                    if (endgameState(state) || val < -350)
+                    if (endgameState(state))
                         val -= KING_MAP_ENDGAME[7-i][j];
                     else
                         val -= KING_MAP[7-i][j];
@@ -568,38 +679,52 @@ extern "C" int evaluateState(GameState state) {
             }
         }
     }
+    if (state.board[6][3] == 1 && state.board[6][4] == 1)
+        val -= 35;
+    if (state.board[1][3] == 7 && state.board[1][4] == 7)
+        val += 35;
+    if (whiteBishops >= 2)
+        val += 15;
+    if (blackBishops >= 2)
+        val -= 15;
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             switch (state.board[i][j]) {
                 case 2:
                 case 3:
                 case 4:
-                    val += 16-myAbs(blackKingSquare[0] - i)-myAbs(blackKingSquare[1] - j); break;
+                    val += 1.5*(16-myAbs(blackKingSquare[0]-i) - myAbs(blackKingSquare[1]-j)); break;
                 case 8:
                 case 9:
                 case 10:
-                    val -= 16-myAbs(whiteKingSquare[0] - i)-myAbs(whiteKingSquare[1] - j); break;
+                    val -= 1.5*(16-myAbs(whiteKingSquare[0]-i) - myAbs(whiteKingSquare[1]-j)); break;
+                case 5:
+                    val += 0.5*(16-myAbs(blackKingSquare[0]-i) - myAbs(blackKingSquare[1]-j)); break;
+                case 11:
+                    val -= 0.5*(16-myAbs(blackKingSquare[0]-i) - myAbs(blackKingSquare[1]-j)); break;
                 default: break;
             }
         }
     }
-    if (val > 350) {
+    if (val > 450) {
+        val -= KING_MAP[whiteKingSquare[0]][whiteKingSquare[1]];
         square choices[8] = {{blackKingSquare[0]+1,blackKingSquare[1]},{blackKingSquare[0]-1,blackKingSquare[1]},{blackKingSquare[0],blackKingSquare[1]+1},{blackKingSquare[0],blackKingSquare[1]-1},
             {blackKingSquare[0]+1,blackKingSquare[1]+1},{blackKingSquare[0]+1,blackKingSquare[1]-1},{blackKingSquare[0]-1,blackKingSquare[1]+1},{blackKingSquare[0]-1,blackKingSquare[1]-1}};
         for (int i = 0; i < 8; i++) {
             if (!validMove(state, blackKingSquare, choices[i], -1))
-                val += 20;
+                val += 15;
         }
-        val -= 10*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
+        val -= 15*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
-    if (val < -350) {
+    if (val < -450) {
+        val += KING_MAP[blackKingSquare[0]][blackKingSquare[1]];
         square choices[8] = {{whiteKingSquare[0]+1,whiteKingSquare[1]},{whiteKingSquare[0]-1,whiteKingSquare[1]},{whiteKingSquare[0],whiteKingSquare[1]+1},{whiteKingSquare[0],whiteKingSquare[1]-1},
             {whiteKingSquare[0]+1,whiteKingSquare[1]+1},{whiteKingSquare[0]+1,whiteKingSquare[1]-1},{whiteKingSquare[0]-1,whiteKingSquare[1]+1},{whiteKingSquare[0]-1,whiteKingSquare[1]-1}};
         for (int i = 0; i < 8; i++) {
             if (!validMove(state, whiteKingSquare, choices[i], 1))
-                val -= 20;
+                val -= 15;
         }
-        val += 10*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
+        val += 15*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
     val += (rand()%10)-5;
     return val;
@@ -630,7 +755,40 @@ void debugBoard(GameState state) {
     }
 }
 
-extern "C" int gameRes(GameState state, int turn) {
+bool sameState(GameState s1, GameState s2) {
+    if (s1.lastMoved[0] != s2.lastMoved[0] || s1.lastMoved[1] != s2.lastMoved[1])
+        return false;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (s1.board[i][j] != s2.board[i][j] || s1.moved[i][j] != s2.moved[i][j])
+                return false;
+        }
+    }
+    return true;
+}
+int num_repetitions(GameState states[], int size, GameState state) {
+    int counter = 0;
+    for (int i = 0; i < size; i++) {
+        if (sameState(state, states[i]))
+            counter++;
+    }
+    return counter;
+}
+int num_reps_extra(GameState states[], int size, GameState state, GameState extra) {
+    int counter = 0;
+    for (int i = 0; i < size; i++) {
+        if (sameState(state, states[i]))
+            counter++;
+    }
+    if (sameState(state, extra))
+        counter++;
+    return counter;
+}
+
+extern "C" int gameRes(GameState states[], int statesSize, GameState state, int turn) {
+    int reps = num_repetitions(states, statesSize, state);
+    if (reps >= 3)
+        return 3;
     vector<vector<int> > moves = validMoves(state, turn);
     if (moves.size() > 0)
         return 0;
@@ -648,8 +806,8 @@ struct MoveRoot {
         int material;
 };
 
-int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
-    int res = gameRes(state, turn);
+int alphaBeta(GameState states[], int statesSize, GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
+    int res = gameRes(states, statesSize, state, turn);
     if (depth == 0 && res == 0) {
         return turn*evaluateState(state);
     }
@@ -665,18 +823,31 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
         GameState newState = afterVecMove(state, moves.at(i));
         int nextDepth = depth-1;
         int timeElapsed = get_millis()-start_calc;
-        if (trueDepth >= 0 || (trueDepth == -1 && timeElapsed < timeLimit*0.25)) {
+        int extraPoints = 0;
+        bool threefold = false;
+        if (trueDepth >= -1 && timeElapsed < timeLimit*0.75) {
             int capturePiece = state.board[moves.at(i).at(2)][moves.at(i).at(3)];
-            if (PIECE_SIDE[capturePiece] == turn*-1 && (evaluateMaterial(newState) == root->material || get_millis()-start_calc < timeLimit*0.5)
-            && timeLimit-timeElapsed > 5000) {
-                nextDepth = 1;
-                if (trueDepth >= 1 || timeElapsed < timeLimit*0.5)
-                    nextDepth += 1;
-                if (timeElapsed < 5000 && timeLimit > 15000)
-                    nextDepth += 1;
+            bool capture = (PIECE_SIDE[capturePiece] == turn*-1);
+            if (capture)
+                extraPoints += 8;
+            bool check = false;
+            if (trueDepth >= 0) {
+                check = inCheck(newState, turn*-1);
+                if (check)
+                    extraPoints += 20;
             }
+            if ((capture || check) && (turn*evaluateMaterial(newState) <= turn*root->material || timeElapsed < timeLimit*0.5)) {
+                nextDepth = 1;
+            }
+            threefold = (num_reps_extra(states, statesSize, newState, state) >= 3);
         }
-        int curr_val = -1*alphaBeta(newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit)*pow(0.95, root->trueDepth-trueDepth);
+        int curr_val;
+        if (threefold) {
+            curr_val = 0;
+        } else {
+            curr_val = -alphaBeta(states, statesSize, newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit);
+            curr_val += extraPoints;
+        }
         if (curr_val > value) {
             value = curr_val;
             if (trueDepth == root->depth) {
@@ -707,7 +878,15 @@ extern "C" void set_calc_time(int c) {
     calc_time = c;
 }
 
-extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=true) {
+extern "C" int showMoves(GameState state, int turn) {
+    vector<vector<int> > moves = validMoves(state, turn);
+    for (int i = 0; i < moves.size(); i++) {
+        cout << "(" << moves.at(i).at(0) << moves.at(i).at(1) << ") -> (" << moves.at(i).at(2) << moves.at(i).at(3) << ")" << endl;
+    }
+    return 0;
+}
+
+extern "C" int minimax(GameState states[], int statesSize, GameState s, int turn, int depth, bool moreEndgameDepth=true) {
     srand(time(0));
     square noSquare = {-1,-1};
     MoveRoot* root = new MoveRoot();
@@ -720,17 +899,9 @@ extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=t
     int score0 = evaluateState(s);
     cout << "score: " << score0 << endl;
     start_calc = get_millis();
-    alphaBeta(s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
+    alphaBeta(states, statesSize, s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
     //cout << "res = " << res << endl;
     delete root;
     return res;
-}
-
-extern "C" int showMoves(GameState state, int turn) {
-    vector<vector<int> > moves = validMoves(state, turn);
-    for (int i = 0; i < moves.size(); i++) {
-        cout << "(" << moves.at(i).at(0) << moves.at(i).at(1) << ") -> (" << moves.at(i).at(2) << moves.at(i).at(3) << ")" << endl;
-    }
-    return 0;
 }

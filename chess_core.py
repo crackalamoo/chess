@@ -52,6 +52,12 @@ def cppState(b, mp):
     else:
         state.lastMoved = cppSquare(mp[len(mp)-1])
     return state
+def cppStates(s):
+    cpp_row = GameState*len(s)
+    row = []
+    for i in range(len(s)):
+        row.append(cppState(s[i][0], s[i][1]))
+    return cpp_row(*row)
 def pythonBoard(state):
     b = []
     for i in range(8):
@@ -101,13 +107,16 @@ def validMove(b, mp, start, end, turn, useCheck=True):
 def inCheck(b, mp, turn):
     state = cppState(b, mp)
     return cpp_inCheck(state, ctypes.c_int(turn))
-def gameRes(b, mp, turn):
+def gameRes(states, b, mp, turn):
+    states = cppStates(states)
     state = cppState(b, mp)
-    return cpp_gameRes(state, ctypes.c_int(turn))
-def minimax(b, mp, turn, depth, time, moreEndgameDepth):
+    return cpp_gameRes(states, ctypes.c_int(len(states)), state, ctypes.c_int(turn))
+def minimax(states, b, mp, turn, depth, time, moreEndgameDepth):
     cpp_setCalc(time)
     state = cppState(b, mp)
-    res = cpp_minimax(state, ctypes.c_int(turn), ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
+    states = cppStates(states)
+    res = cpp_minimax(states, ctypes.c_int(len(states)), state, ctypes.c_int(turn),
+    ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
     return ((int((res%10000)/1000),int((res%1000)/100)), (int((res%100)/10), int(res%10)), int(res/10000))
 def showMoves(b, mp, turn):
     state = cppState(b, mp)

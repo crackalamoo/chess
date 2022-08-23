@@ -38,7 +38,7 @@ function drawBoard() {
         if (lastMove.length > 0 && ((lastMove[0][0] == yb && lastMove[0][1] == xb) || (lastMove[1][0] == yb && lastMove[1][1] == xb)))
             ctx.fillStyle = ["#CDD16A", "#AAA23B"][(i+Math.floor(i/8))%2];
         if (gameRes == 1 && board[yb][xb] == 9-3*toPlay)
-            ctx.fillStyle = "#DD2200";
+            ctx.fillStyle = "#CC2200";
         if (gameRes == 2 && (board[yb][xb] == 6 || board[yb][xb] == 12))
             ctx.fillStyle = "#CCCC00";
         ctx.fillRect(margin+(w/8.0)*x, margin+(w/8.0)*y, w/8.0, w/8.0);
@@ -148,7 +148,6 @@ function drawTimer() {
     var flip = (players[-1] == 0 && (toPlay == -1 || players[1] != 0));
     ctx.fillStyle = "#333333";
     ctx.fillRect(full_w, 0, full_w*0.25, full_w);
-    ctx.fillStyle = "#002222";
     ctx.fillRect(full_w*1.015, full_w*0.09, full_w*0.22, full_w*0.12);
     ctx.fillRect(full_w*1.015, full_w*0.79, full_w*0.22, full_w*0.12);
     var grad = ctx.createLinearGradient(full_w*1.2, 0, full_w, full_w);
@@ -167,11 +166,16 @@ function drawTimer() {
         t1 = timeLeft[1];
         t2 = timeLeft[0];
     }
-    ctx.fillStyle = "#000000";
     ctx.font = 'bold 36px Courier New';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.fillStyle = "#000000";
+    if ((gameRes == 0 || (t1 <= 0 && t1 != UNLIMITED_TIME)) && ((!flip && toPlay == -1) || (flip && toPlay == 1)))
+        ctx.fillStyle = "#CC0000";
     ctx.fillText(formatTime(t1), full_w*1.125, full_w*0.15);
+    ctx.fillStyle = "#000000";
+    if ((gameRes == 0 || (t2 <= 0 && t2 != UNLIMITED_TIME)) && ((!flip && toPlay == 1) || (flip && toPlay == -1)))
+        ctx.fillStyle = "#CC0000";
     ctx.fillText(formatTime(t2), full_w*1.125, full_w*0.85);
 }
 function clickBoard(event) {
@@ -327,14 +331,14 @@ var checkSquare = [-1,-1];
 var states = [[DEFAULT_BOARD, []]];
 var toPlay = 1;
 var players = {};
-var gameRes = -1;
+var gameRes = -2;
 players[1] = 0;
 players[-1] = 0;
 var fifty_move_counter = 50;
 var dragging = [-1,-1];
 var dragPos = [-1, -1];
-var timeLeft = [10*60, 10*60];
 const UNLIMITED_TIME = -100*60;
+var timeLeft = [UNLIMITED_TIME, UNLIMITED_TIME];
 var increment = 0;
 var playerPromotion = [-1, -1, -1];
 var timer;
@@ -433,16 +437,17 @@ async function getNextMove() {
         timeLeft[player] += increment;
     switch (players[toPlay]) {
         case 1:
-            var playTime = Math.floor(timeLeft[player]*1000/20)
+            var playTime = Math.floor(timeLeft[player]*1000);
             if (timeLeft[player] == UNLIMITED_TIME)
-                playTime = 10000000;
-            getPython("minimax", {"board": board_to_arg(board), "moved": moved_to_arg(movedPieces), "turn": toPlay, "time": playTime})
+                playTime = 100000;
+            getPython("minimax", {"board": board_to_arg(board), "moved": moved_to_arg(movedPieces), "turn": toPlay,
+            "states": states_to_arg(states), "time": playTime})
             .then((move) => makeMove(move['start'], move['end'], move['promotion']));
             break;
         case 2:
-            var playTime = Math.min(timeLeft[player]/25.0, 7.0);
+            var playTime = Math.floor(timeLeft[player]*1000);
             if (timeLeft[player] == UNLIMITED_TIME)
-                playTime = 7.0;
+                playTime = 100000;
             getPython("nn", {"board": board_to_arg(board), "moved": moved_to_arg(movedPieces), "turn": toPlay,
             "states": states_to_arg(states), "time": playTime})
             .then((move) => makeMove(move['start'], move['end'], move['promotion']));

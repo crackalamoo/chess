@@ -14,7 +14,7 @@ import os
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 1, -1: 1}
+players = {1: 0, -1: 0}
 FLIP_BOARD = (players[-1] == 0)
 
 fifty_move_counter = 50
@@ -99,7 +99,8 @@ def makeMove(start, end, promotion=5, isPromotion=False):
         movedPieces = madeMove[1]
         checkSquare = None
         toPlay *= -1
-        res = gameRes(board, movedPieces, toPlay)
+        res = gameRes(saved_states, board, movedPieces, toPlay)
+        print(res)
         check = inCheck(board, movedPieces, toPlay)
         if check:
             messages.append("\033[91mCheck\033[0m")
@@ -165,13 +166,10 @@ def inputMove(source):
         makeMove(myMove[0], myMove[1], promotion, isPromotion)
     if source == 1:
         print("Thinking...")
-        try:
-            myMove = ai.minimax_ai(board, movedPieces, toPlay)
-            if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
-                isPromotion = True
-            makeMove(myMove[0], myMove[1], myMove[2], isPromotion)
-        except:
-            print("Error in move")
+        myMove = ai.minimax_ai(board, movedPieces, saved_states, toPlay)
+        if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+            isPromotion = True
+        makeMove(myMove[0], myMove[1], myMove[2], isPromotion)
     if source == 2:
         print("Thinking...")
         myMove = ai.nn_ai(nn_model, board, movedPieces, saved_states, toPlay)

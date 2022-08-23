@@ -47,9 +47,18 @@ def index():
 def js_minimax():
     b = arg_to_board(request.args.get('board'))
     mp = arg_to_moved(request.args.get('moved'))
+    states = arg_to_states(request.args.get('states'))
     turn = int(request.args.get('turn'))
     time = int(request.args.get('time'))
-    res = ai.minimax_ai(b, mp, turn, time)
+    time = int(time/20.0)
+    time = min(time, 8000)
+    if len(states) <= 6:
+        time = min(time, 6000)
+    if len(states) <= 4:
+        time = min(time, 4500)
+    if 20 <= len(states) <= 46:
+        time = int(time*1.2)
+    res = ai.minimax_ai(b, mp, states, turn, time)
     return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
 
 @app.route('/nn')
@@ -59,7 +68,15 @@ def js_nn():
     states = arg_to_states(request.args.get('states'))
     turn = int(request.args.get('turn'))
     time = int(request.args.get('time'))
-    res = ai.nn_ai(nn_model, b, mp, states, turn, time)
+    time = int(time/25.0)
+    time = min(time, 8000)
+    if len(states) <= 6:
+        time = min(time, 6000)
+    if len(states) <= 4:
+        time = min(time, 4500)
+    if 20 <= len(states) <= 46:
+        time = int(time*1.2)
+    res = ai.nn_ai(nn_model, b, mp, states, turn, int(time/100)/10.0)
     return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
 
 @app.route('/validmoves')
@@ -89,7 +106,7 @@ def js_makeMove():
         states.append([madeMove[0],madeMove[1]])
         checkSquare = [-1,-1]
         turn *= -1
-        res = gameRes(madeMove[0], madeMove[1], turn)
+        res = gameRes(states, madeMove[0], madeMove[1], turn)
         check = inCheck(madeMove[0], madeMove[1], turn)
         if check:
             messages.append("Check")
