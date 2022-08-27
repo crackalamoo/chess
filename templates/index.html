@@ -20,19 +20,28 @@
 </style>
 </head>
 <body>
-<h1>Chess</h1>
+<h1 class="title">Chess</h1>
+<h3 class="author">
+    <a href="http://harysdalvi.com">Harys Dalvi</a>
+</h3>
+<h3 class="date">August 2021</h3>
+<br>
+<p>An online chess engine</p>
+
 <form name="settings" action="javascript:void(0)">
-White: <select name="white">
+<b>White:</b> <select name="white">
     <option value="0" selected>Human</option>
     <option value="1">AI (minimax)</option>
     <option value="2">AI (neural network)</option>
+    <option value="3">AI (neural network policy)</option>
 </select><br>
-Black: <select name="black">
+<b>Black:</b> <select name="black">
     <option value="0">Human</option>
     <option value="1" selected>AI (minimax)</option>
     <option value="2">AI (neural network)</option>
+    <option value="3">AI (neural network policy)</option>
 </select><br>
-Time: <select name="time">
+<b>Time:</b> <select name="time">
     <option value="1">1</option>
     <option value="3">3</option>
     <option value="5">5</option>
@@ -41,17 +50,19 @@ Time: <select name="time">
     <option value="30">30</option>
     <option value="-100">Unlimited</option>
 </select><br>
-Increment: <select name="increment">
+<b>Increment:</b> <select name="increment">
     <option value="0">0</option>
     <option value="1">1</option>
     <option value="5">5</option>
     <option value="10">10</option>
 </select><br>
 <button action="javascript:void(0)" onclick="startFromForm()">Start</button>
-</form>
+</form><br>
+
 <div id="boardHolder">
 <canvas id="board"></canvas>
-</div>
+</div><br><br><br>
+
 <!-- <div id="footer"></div> -->
 <script src="static/main.js"></script>
 <script src="http://harysdalvi.com/services.js"></script>

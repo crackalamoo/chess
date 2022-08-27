@@ -3,26 +3,28 @@ import chess_core as chess
 import tensorflow as tf
 from ai import pgn_to_move, ai_input, move_to_nn
 
-NUM_GAMES = 2#20000
+START_GAME = 20000*3
+END_GAME = 20000*4
 
 train_X0 = [] # board states
-train_X1 = [] # extra info (threefold repetition)
+#train_X1 = [] # extra info (color, threefold repetition)
 train_y = [] # policy
 #train_y1 = [] # win probability
-
+#FILENAME = 'data/lichess_arifd2.pgn'
+FILENAME = 'data/RecentGames.pgn'
+SAVETO = 'data/gm4'
 
 def move_pgn(pgn, b, mp, turn):
     move = pgn_to_move(pgn, b, mp, turn)
     newBoard = chess.afterMove(b, mp, move[0], move[1], move[2])
     return newBoard
 
-def playGame(game, white, black, termination):
+def playGame(game, termination):
     turn = 1
     sb = [chess.DEFAULT_BOARD, []] # simulated board
     if not termination == "[Termination \"Normal\"]":
         return
-    white = white[8:-2]
-    black = black[8:-2]
+    game = game.replace('\n', '').replace(". ", ".").replace(".", ". ")
     game = game.split(" ")
     res = game.pop(len(game)-1)
     res = {'1-0': 1, '1/2-1/2': 0, '0-1': -1}[res]
@@ -37,39 +39,48 @@ def playGame(game, white, black, termination):
         inp = ai_input(turn, gameStates)
         if res == turn:
             train_X0.append(inp[0])
-            train_X1.append(inp[1])
-            train_y.append(move_to_nn(move[0], move[1]))
-            print(move)
-            print(move_to_nn(move[0], move[1], False))
+            #train_X1.append(inp[1])
+            train_y.append(move_to_nn(move[0], move[1], turn))
             #train_y1.append(res*turn) # win for this player
         turn *= -1
-def playGames(num):
+def playGames(start, num):
+    print("Loading " + FILENAME)
+    data = open(FILENAME).read().replace('\r','\n').split('\n')
     print("Playing through games")
-    data = open('data/lichess_arifd2.pgn').read().split('\n')
-    num = min(num, int(len(data)/20))
+    num = min(num, int((len(data)-start)/20))
     n = 0
+    played = 0
     for l in range(len(data)):
-        if data[l].startswith('1'):
-            playGame(data[l], data[l-14], data[l-13], data[l-2])
-            n += 1
-            print(str(n)+"/"+str(num) + " ("+str(int(n/num*100))+"%)", end='\r')
         if n >= num:
             break
-    print("Played through " + str(n) + " games (" + str(len(train_y)) + " positions)")
+        if data[l].startswith('1.'):
+            if n >= start:
+                game = data[l]
+                i = 1
+                while not data[l+i].startswith("[Event"):
+                    game += data[l+i]
+                    i += 1
+                #playGame(game, data[l-2])
+                playGame(game, "[Termination \"Normal\"]")
+                played += 1
+            n += 1
+            print("  "+str(n-start)+"/"+str(num-start) + " ("+str(int((n-start)/(num-start)*100))+"%) ", end='\r')
+    print("Played through " + str(played) + " games (" + str(len(train_y)) + " positions)")
 
 def movePrint(pgn, sb, turn):
     sb = move_pgn(pgn, sb[0], sb[1], turn)
     print(sb[0], sb[1])
 
-playGames(NUM_GAMES)
+playGames(START_GAME, END_GAME)
 
+print("Saving to " + SAVETO + ".npz")
 print("Saving data...")
 train_X0 = np.asarray(train_X0)
-train_X1 = np.asarray(train_X1)
+#train_X1 = np.asarray(train_X1)
 train_y = np.asarray(train_y)
 print(train_X0.shape)
-print(train_X1.shape)
+#print(train_X1.shape)
 print(train_y.shape)
 
-np.savez_compressed("data/data1", X0=train_X0, X1=train_X1, y=train_y)
+np.savez_compressed(SAVETO, X=train_X0, y=train_y)
 print("Saved data")

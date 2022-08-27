@@ -11,6 +11,7 @@
 using namespace std;
 
 const int PIECE_VAL[] = { 0, 100, 320, 330, 500, 900, 20000, -100, -320, -330, -500, -900, -20000 };
+const int SIMPLIFIED_PIECE_VAL[] = {0, 100, 300, 300, 500, 900, 20000, -100, -300, -300, -500, -900, -20000};
 const int PIECE_SIDE[] = { 0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1 };
 const int FILE_SEARCH[] = {3, 4, 2, 5, 1, 6, 0, 7};
 const int RANK_SEARCH[] = {3, 4, 1, 6, 0, 7, 2, 5};
@@ -37,7 +38,7 @@ const int BISHOP_MAP[8][8]={{-20,-10,-10,-10,-10,-10,-10,-20},
                             {-10,  5, 25, 20, 20, 25,  5,-10},
                             {-10,  0, 25, 25, 25, 25,  0,-10},
                             {-10, 10, 10, 15, 15, 10, 10,-10},
-                            {-10,  5,  0,  5,  5,  0,  5,-10},
+                            {-10, 10,  0,  5,  5,  0, 10,-10},
                             {-20,-10,-20,-10,-10,-20,-10,-20}};
 const int ROOK_MAP[8][8] = {{ 0,  0,  0,  0,  0,  0,  0,  0},
                             { 5, 10, 10, 10, 10, 10, 10,  5},
@@ -62,7 +63,7 @@ const int KING_MAP[8][8] = {{-30,-40,-40,-50,-50,-40,-40,-30},
                             {-20,-30,-30,-40,-40,-30,-30,-20},
                             {-10,-20,-20,-20,-20,-20,-20,-10},
                             {  0,  0,-15,-15,-15,-15,  0,  0},
-                            { 20, 30, 35,  0,  0, 10, 40, 20}};
+                            { 25, 35, 40,  5,  5, 15, 45, 25}};
 const int KING_MAP_ENDGAME[8][8] = {{-50,-40,-30,-20,-20,-30,-40,-50},
                                     {-30,-20,-10,  0,  0,-10,-20,-30},
                                     {-30,-10, 20, 30, 30, 20,-10,-30},
@@ -310,7 +311,7 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
                 return false;
             }
         } else if (end[0] == start[0]-2 && end[1] == start[1]) { // # moving forward two
-            if (state.moved[start[0]][start[1]] == 1 || state.board[start[0]-1][start[1]] != 0 || state.board[start[0]-2][start[1]] != 0)
+            if (state.moved[start[0]][start[1]] || state.board[start[0]-1][start[1]] != 0 || state.board[start[0]-2][start[1]] != 0)
                 return false;
         } else {
             return false;
@@ -327,7 +328,7 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
                 return false;
             }
         } else if (end[0] == start[0]+2 && end[1] == start[1]) { // # moving forward two
-            if (state.moved[start[0]][start[1]] == 1 || state.board[start[0]+1][start[1]] != 0 || state.board[start[0]+2][start[1]] != 0)
+            if (state.moved[start[0]][start[1]] || state.board[start[0]+1][start[1]] != 0 || state.board[start[0]+2][start[1]] != 0)
                 return false;
         } else {
             return false;
@@ -367,14 +368,15 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
         if (end[0] == start[0] && end[1] == start[1]+2 && end[1] == 6) { // kingside castle
             square between_square = {start[0], start[1]+1};
             GameState between_board = afterMove(state, start, between_square);
-            if (state.board[start[0]][5] != 0 || state.moved[start[0]][4] == 1 || state.moved[start[0]][7] == 1
+            if (state.board[start[0]][5] != 0 || state.moved[start[0]][4] || state.moved[start[0]][7]
             || state.board[start[0]][7] != castle || inCheck(state, turn) || inCheck(between_board, turn))
                 return false;
         } else if (end[0] == start[0] && end[1] == start[1]-2 && end[1] == 2) { // queenside castle
             square between_square = {start[0], start[1]-1};
             GameState between_board = afterMove(state, start, between_square);
-            if (state.board[start[0]][5] != 0 || state.board[start[0]][1] != 0 || state.moved[start[0]][4] == 1 || state.moved[start[0]][7] == 1
-            || state.board[start[0]][7] != castle || inCheck(state, turn) || inCheck(between_board, turn))
+            if (state.board[start[0]][3] != 0 || state.board[start[0]][2] != 0 || state.board[start[0]][1] != 0
+            || state.moved[start[0]][4] || state.moved[start[0]][0] || state.board[start[0]][0] != castle
+            || inCheck(state, turn) || inCheck(between_board, turn))
                 return false;
         } else {
             return false;
@@ -385,30 +387,35 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
 
 vector<vector<int> > validMoves(GameState state, int turn) {
     vector< vector<int> > moves;
-    vector<int> m;
     int wpm[][2] = {{-1,-1},{-1,1},{-1,0},{-2,0}};
     int bpm[][2] = {{1,-1},{1,1},{1,0},{2,0}};
-    int km[][2] = {{2,1},{2,-1},{1,2},{1,-2},{-1,2},{-1,-2},{-2,1},{-2,-1}};
-    int rm[][2] = {{1,0},{0,1},{-1,0},{0,-1}};
-    int cm[][2] = {{1,1},{1,-1},{-1,1},{-1,-1},{1,0},{0,1},{-1,0},{0,-1},{0,2},{0,-2}};
+    int nm[][2] = {{2,1},{2,-1},{1,2},{1,-2},{-1,2},{-1,-2},{-2,1},{-2,-1}};
+    int bm[][2] = {{1,1},{2,2},{3,3},{4,4},{5,5},{6,6},{7,7},
+                    {-1,1},{-2,2},{-3,3},{-4,4},{-5,5},{-6,6},{-7,7},
+                    {1,-1},{2,-2},{3,-3},{4,-4},{5,-5},{6,-6},{7,-7},
+                    {-1,-1},{-2,-2},{-3,-3},{-4,-4},{-5,-5},{-6,-6},{-7,-7}};
+    int rm[][2] = {{1,0},{2,0},{3,0},{4,0},{5,0},{6,0},{7,0},
+                    {0,1},{0,2},{0,3},{0,4},{0,5},{0,6},{0,7},
+                    {-1,0},{-2,0},{-3,0},{-4,0},{-5,0},{-6,0},{-7,0},
+                    {0,-1},{0,-2},{0,-3},{0,-4},{0,-5},{0,-6},{0,-7}};
+    int km[][2] = {{1,1},{1,-1},{-1,1},{-1,-1},{1,0},{0,1},{-1,0},{0,-1},{0,2},{0,-2}};
     for (int i0 = 0; i0 < 8; i0++) {
         for (int j0 = 0; j0 < 8; j0++) {
             int i = RANK_SEARCH[i0];
             int j = FILE_SEARCH[j0];
-            square startPos = {i,j};
+            square start = {i,j};
             if (PIECE_SIDE[state.board[i][j]] == turn) {
                 int piece = state.board[i][j];
-                vector<int> m;
                 switch(piece) {
                     case 1:
                         for (int k = 0; k < 4; k++) {
                             square end = {i+wpm[k][0],j+wpm[k][1]};
-                            if (validMove(state, startPos, end, turn)) {
-                                m.clear();
-                                m.push_back(startPos[0]);
-                                m.push_back(startPos[1]);
-                                m.push_back(end[0]);
-                                m.push_back(end[1]);
+                            if (validMove(state, start, end, turn)) {
+                                vector<int> m;
+                                m.push_back(i);
+                                m.push_back(j);
+                                m.push_back(i+wpm[k][0]);
+                                m.push_back(j+wpm[k][1]);
                                 moves.push_back(m);
                             }
                         }
@@ -416,12 +423,12 @@ vector<vector<int> > validMoves(GameState state, int turn) {
                     case 7:
                         for (int k = 0; k < 4; k++) {
                             square end = {i+bpm[k][0],j+bpm[k][1]};
-                            if (validMove(state, startPos, end, turn)) {
-                                m.clear();
-                                m.push_back(startPos[0]);
-                                m.push_back(startPos[1]);
-                                m.push_back(end[0]);
-                                m.push_back(end[1]);
+                            if (validMove(state, start, end, turn)) {
+                                vector<int> m;
+                                m.push_back(i);
+                                m.push_back(j);
+                                m.push_back(i+bpm[k][0]);
+                                m.push_back(j+bpm[k][1]);
                                 moves.push_back(m);
                             }
                         }
@@ -429,13 +436,13 @@ vector<vector<int> > validMoves(GameState state, int turn) {
                     case 2:
                     case 8:
                         for (int k = 0; k < 8; k++) {
-                            square end = {i+km[k][0],j+km[k][1]};
-                            if (validMove(state, startPos, end, turn)) {
-                                m.clear();
-                                m.push_back(startPos[0]);
-                                m.push_back(startPos[1]);
-                                m.push_back(end[0]);
-                                m.push_back(end[1]);
+                            square end = {i+nm[k][0],j+nm[k][1]};
+                            if (validMove(state, start, end, turn)) {
+                                vector<int> m;
+                                m.push_back(i);
+                                m.push_back(j);
+                                m.push_back(i+nm[k][0]);
+                                m.push_back(j+nm[k][1]);
                                 moves.push_back(m);
                             }
                         }
@@ -443,94 +450,40 @@ vector<vector<int> > validMoves(GameState state, int turn) {
                     case 6:
                     case 12:
                         for (int k = 0; k < 10; k++) {
-                            square end = {i+cm[k][0],j+cm[k][1]};
-                            if (validMove(state, startPos, end, turn)) {
-                                m.clear();
-                                m.push_back(startPos[0]);
-                                m.push_back(startPos[1]);
-                                m.push_back(end[0]);
-                                m.push_back(end[1]);
+                            square end = {i+km[k][0],j+km[k][1]};
+                            if (validMove(state, start, end, turn)) {
+                                vector<int> m;
+                                m.push_back(i);
+                                m.push_back(j);
+                                m.push_back(i+km[k][0]);
+                                m.push_back(j+km[k][1]);
                                 moves.push_back(m);
                             }
                         }
                         break;
                 }
-                if (piece == 3 || piece == 5 || piece == 9 || piece == 11) {
-                    for (int k = 1; k <= 7; k++) {
-                        square se = {i+k,j+k};
-                        square sw = {i+k,j-k};
-                        square ne = {i-k,j+k};
-                        square nw = {i-k,j-k};
-                        if (validMove(state, startPos, se, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(se[0]);
-                            m.push_back(se[1]);
-                            moves.push_back(m);
-                        }
-                        if (validMove(state, startPos, sw, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(sw[0]);
-                            m.push_back(sw[1]);
-                            moves.push_back(m);
-                        }
-                        if (validMove(state, startPos, ne, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(ne[0]);
-                            m.push_back(ne[1]);
-                            moves.push_back(m);
-                        }
-                        if (validMove(state, startPos, nw, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(nw[0]);
-                            m.push_back(nw[1]);
+                if (piece == 3 || piece == 9 || piece == 5 || piece == 11) {
+                    for (int k = 0; k < 28; k++) {
+                        square end = {i+bm[k][0],j+bm[k][1]};
+                        if (validMove(state, start, end, turn)) {
+                            vector<int> m;
+                            m.push_back(i);
+                            m.push_back(j);
+                            m.push_back(i+bm[k][0]);
+                            m.push_back(j+bm[k][1]);
                             moves.push_back(m);
                         }
                     }
                 }
-                if (piece == 4 || piece == 5 || piece == 10 || piece == 11) {
-                    for (int k = 1; k <= 7; k++) {
-                        square s = {i+k,j};
-                        square n = {i-k,j};
-                        square e = {i,j+k};
-                        square w = {i,j-k};
-                        if (validMove(state, startPos, n, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(n[0]);
-                            m.push_back(n[1]);
-                            moves.push_back(m);
-                        }
-                        if (validMove(state, startPos, s, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(s[0]);
-                            m.push_back(s[1]);
-                            moves.push_back(m);
-                        }
-                        if (validMove(state, startPos, e, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(e[0]);
-                            m.push_back(e[1]);
-                            moves.push_back(m);
-                        }
-                        if (validMove(state, startPos, w, turn)) {
-                            m.clear();
-                            m.push_back(startPos[0]);
-                            m.push_back(startPos[1]);
-                            m.push_back(w[0]);
-                            m.push_back(w[1]);
+                if (piece == 4 || piece == 10 || piece == 5 || piece == 11) {
+                    for (int k = 0; k < 28; k++) {
+                        square end = {i+rm[k][0],j+rm[k][1]};
+                        if (validMove(state, start, end, turn)) {
+                            vector<int> m;
+                            m.push_back(i);
+                            m.push_back(j);
+                            m.push_back(i+rm[k][0]);
+                            m.push_back(j+rm[k][1]);
                             moves.push_back(m);
                         }
                     }
@@ -541,65 +494,6 @@ vector<vector<int> > validMoves(GameState state, int turn) {
     return moves;
 }
 
-bool hasValidMove(GameState state, int turn) {
-    for (int i0 = 0; i0 < 8; i0++) {
-        for (int j0 = 0; j0 < 8; j0++) {
-            int i = RANK_SEARCH[i0];
-            int j = FILE_SEARCH[j0];
-            if (PIECE_SIDE[state.board[i][j]] == turn) {
-                int piece = state.board[i][j];
-                vector< vector<int> > directions;
-                int steps = 1;
-                square startPos = {i,j};
-                switch(piece) {
-                    case 1:
-                        directions = dirHolder.whitePawnMoves;
-                        break;
-                    case 7:
-                        directions = dirHolder.blackPawnMoves;
-                        break;
-                    case 2:
-                    case 8:
-                        directions = addDirection(directions, dirHolder.knightMoves);
-                        break;
-                    case 3:
-                    case 9:
-                        directions = addDirection(directions, dirHolder.bishopMoves);
-                        steps = 7;
-                        break;
-                    case 4:
-                    case 10:
-                        directions = addDirection(directions, dirHolder.rookMoves);
-                        steps = 7;
-                        break;
-                    case 6:
-                    case 12:
-                        directions = addDirection(directions, dirHolder.castleMoves);
-                        directions = addDirection(directions, dirHolder.queenMoves);
-                        break;
-                    case 5:
-                    case 11:
-                        directions = addDirection(directions, dirHolder.queenMoves);
-                        steps = 7;
-                        break;
-                }
-                for (int d = 0; d < directions.size(); d++) {
-                    square pos = {i,j};
-                    for (int k = 0; k < steps; k++) {
-                        pos[0] += directions.at(d).at(0);
-                        pos[1] += directions.at(d).at(1);
-                        if (validMove(state, startPos, pos, turn)) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return false;
-
-}
-
 bool endgameState(GameState state) {
     int whiteVal = 0;
     int blackVal = 0;
@@ -607,19 +501,22 @@ bool endgameState(GameState state) {
         for (int j = 0; j < 8; j++) {
             if (state.board[i][j] == 5 || state.board[i][j] == 11)
                 return false;
-            if (PIECE_SIDE[state.board[i][j]] == 1)
+            /* if (PIECE_SIDE[state.board[i][j]] == 1)
                 whiteVal += PIECE_VAL[state.board[i][j]];
             if (PIECE_SIDE[state.board[i][j]] == -1)
-                blackVal -= PIECE_VAL[state.board[i][j]];
+                blackVal -= PIECE_VAL[state.board[i][j]]; */
         }
     }
-    whiteVal -= PIECE_VAL[6];
+    /* whiteVal -= PIECE_VAL[6];
     blackVal += PIECE_VAL[12];
-    return (whiteVal <= 1300 && blackVal <= 1300);
+    return (whiteVal <= 1300 && blackVal <= 1300); */
+    return true;
 }
 
 int myAbs(int n) {
-    return n*(n < 0);
+    if (n < 0)
+        return n*-1;
+    return n;
 }
 
 extern "C" int evaluateState(GameState state) {
@@ -628,6 +525,7 @@ extern "C" int evaluateState(GameState state) {
     square blackKingSquare;
     int whiteBishops;
     int blackBishops;
+    bool isEndgame = endgameState(state);
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             int piece = state.board[i][j];
@@ -638,9 +536,9 @@ extern "C" int evaluateState(GameState state) {
                 if (piece == 8 || piece == 9)
                     val -= 35;
                 if (piece == 5 || piece == 6)
-                    val -= 25;
+                    val -= 20;
                 if (piece == 11 || piece == 12)
-                    val += 25;
+                    val += 20;
             }
             switch(piece) {
                 case 0: break;
@@ -663,7 +561,7 @@ extern "C" int evaluateState(GameState state) {
                 case 6:
                     whiteKingSquare[0] = i;
                     whiteKingSquare[1] = j;
-                    if (endgameState(state))
+                    if (isEndgame)
                         val += KING_MAP_ENDGAME[i][j];
                     else
                         val += KING_MAP[i][j];
@@ -671,7 +569,7 @@ extern "C" int evaluateState(GameState state) {
                 case 12:
                     blackKingSquare[0] = i;
                     blackKingSquare[1] = j;
-                    if (endgameState(state))
+                    if (isEndgame)
                         val -= KING_MAP_ENDGAME[7-i][j];
                     else
                         val -= KING_MAP[7-i][j];
@@ -684,9 +582,9 @@ extern "C" int evaluateState(GameState state) {
     if (state.board[1][3] == 7 && state.board[1][4] == 7)
         val += 35;
     if (whiteBishops >= 2)
-        val += 15;
+        val += 35;
     if (blackBishops >= 2)
-        val -= 15;
+        val -= 35;
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             switch (state.board[i][j]) {
@@ -707,24 +605,30 @@ extern "C" int evaluateState(GameState state) {
         }
     }
     if (val > 450) {
-        val -= KING_MAP[whiteKingSquare[0]][whiteKingSquare[1]];
+        if (isEndgame)
+            val -= KING_MAP_ENDGAME[whiteKingSquare[0]][whiteKingSquare[1]];
+        else
+            val -= KING_MAP[whiteKingSquare[0]][whiteKingSquare[1]];
         square choices[8] = {{blackKingSquare[0]+1,blackKingSquare[1]},{blackKingSquare[0]-1,blackKingSquare[1]},{blackKingSquare[0],blackKingSquare[1]+1},{blackKingSquare[0],blackKingSquare[1]-1},
             {blackKingSquare[0]+1,blackKingSquare[1]+1},{blackKingSquare[0]+1,blackKingSquare[1]-1},{blackKingSquare[0]-1,blackKingSquare[1]+1},{blackKingSquare[0]-1,blackKingSquare[1]-1}};
         for (int i = 0; i < 8; i++) {
             if (!validMove(state, blackKingSquare, choices[i], -1))
                 val += 15;
         }
-        val -= 15*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
+        val -= 35*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
     if (val < -450) {
-        val += KING_MAP[blackKingSquare[0]][blackKingSquare[1]];
+        if (isEndgame)
+            val += KING_MAP_ENDGAME[blackKingSquare[0]][blackKingSquare[1]];
+        else
+            val += KING_MAP[blackKingSquare[0]][blackKingSquare[1]];
         square choices[8] = {{whiteKingSquare[0]+1,whiteKingSquare[1]},{whiteKingSquare[0]-1,whiteKingSquare[1]},{whiteKingSquare[0],whiteKingSquare[1]+1},{whiteKingSquare[0],whiteKingSquare[1]-1},
             {whiteKingSquare[0]+1,whiteKingSquare[1]+1},{whiteKingSquare[0]+1,whiteKingSquare[1]-1},{whiteKingSquare[0]-1,whiteKingSquare[1]+1},{whiteKingSquare[0]-1,whiteKingSquare[1]-1}};
         for (int i = 0; i < 8; i++) {
             if (!validMove(state, whiteKingSquare, choices[i], 1))
                 val -= 15;
         }
-        val += 15*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
+        val += 35*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
     val += (rand()%10)-5;
     return val;
@@ -734,7 +638,7 @@ int evaluateMaterial(GameState state) {
     int val = 0;
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
-            val += PIECE_VAL[state.board[i][j]];
+            val += SIMPLIFIED_PIECE_VAL[state.board[i][j]];
         }
     }
     return val;
@@ -788,13 +692,13 @@ int num_reps_extra(GameState states[], int size, GameState state, GameState extr
 extern "C" int gameRes(GameState states[], int statesSize, GameState state, int turn) {
     int reps = num_repetitions(states, statesSize, state);
     if (reps >= 3)
-        return 3;
+        return 3; // threefold repetition
     vector<vector<int> > moves = validMoves(state, turn);
     if (moves.size() > 0)
-        return 0;
+        return 0; // game continuing
     if (inCheck(state, turn))
-        return 1;
-    return 2;
+        return 1; // checkmate
+    return 2; // stalemate
 }
 
 struct MoveRoot {
@@ -819,27 +723,37 @@ int alphaBeta(GameState states[], int statesSize, GameState state, int depth, in
     }
     vector<vector<int> > moves = validMoves(state, turn);
     int value = -100000;
+    int bottomDepth = -1;
+    if (timeLimit <= 5000)
+        bottomDepth = 0;
+    /* if (timeLimit >= 10000 && moves.size() < 20)
+        bottomDepth = -2;
+    if (timeLimit >= 10000)
+        bottomDepth = -3;
+    if (timeLimit >= 15000)
+        bottomDepth = -4; */
     for (int i = 0; i < moves.size(); i++) {
         GameState newState = afterVecMove(state, moves.at(i));
         int nextDepth = depth-1;
         int timeElapsed = get_millis()-start_calc;
         int extraPoints = 0;
-        bool threefold = false;
-        if (trueDepth >= -1 && timeElapsed < timeLimit*0.75) {
+        bool threefold = (num_reps_extra(states, statesSize, newState, state) >= 3);
+        if (trueDepth >= bottomDepth) {
             int capturePiece = state.board[moves.at(i).at(2)][moves.at(i).at(3)];
+            int curr_material = turn*evaluateMaterial(newState);
             bool capture = (PIECE_SIDE[capturePiece] == turn*-1);
             if (capture)
-                extraPoints += 8;
+                extraPoints += 10*(curr_material >= 0);
             bool check = false;
             if (trueDepth >= 0) {
                 check = inCheck(newState, turn*-1);
                 if (check)
                     extraPoints += 20;
             }
-            if ((capture || check) && (turn*evaluateMaterial(newState) <= turn*root->material || timeElapsed < timeLimit*0.5)) {
+            if ((capture || check) && (curr_material >= turn*root->material || timeElapsed < timeLimit*0.25
+            || (trueDepth > bottomDepth && timeElapsed < timeLimit*0.5))) {
                 nextDepth = 1;
             }
-            threefold = (num_reps_extra(states, statesSize, newState, state) >= 3);
         }
         int curr_val;
         if (threefold) {

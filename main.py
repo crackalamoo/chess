@@ -14,15 +14,19 @@ import os
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 0, -1: 0}
+players = {1: 4, -1: 4}
 FLIP_BOARD = (players[-1] == 0)
+DEBUG = False
+UNTRAINED_MODEL = False
 
 fifty_move_counter = 50
 saved_states = [[DEFAULT_BOARD, []]]
 messages = []
 
-nn_model = ai.load_model()
-#nn_model = ai.define_model()
+if UNTRAINED_MODEL:
+    nn_model = ai.define_model()
+else:
+    nn_model = ai.load_model()
 
 if __name__ == "__main__":
     class ChessWindow(QMainWindow):
@@ -100,7 +104,6 @@ def makeMove(start, end, promotion=5, isPromotion=False):
         checkSquare = None
         toPlay *= -1
         res = gameRes(saved_states, board, movedPieces, toPlay)
-        print(res)
         check = inCheck(board, movedPieces, toPlay)
         if check:
             messages.append("\033[91mCheck\033[0m")
@@ -129,6 +132,8 @@ def makeMove(start, end, promotion=5, isPromotion=False):
             messages.append("\033[93m\033[1mDrawn by threefold repetition\033[0m")
     else:
         print("Invalid move")
+    if DEBUG:
+        input("Press enter")
     threading.Thread(target=getNextMove).start()
 
 
@@ -179,6 +184,12 @@ def inputMove(source):
     if source == 3:
         print("Thinking...")
         myMove = ai.policy_ai(nn_model, board, movedPieces, saved_states, toPlay)
+        if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
+            isPromotion = True
+        makeMove(myMove[0], myMove[1], myMove[2], isPromotion)
+    if source == 4:
+        print("Thinking...")
+        myMove = ai.hybrid_ai(nn_model, board, movedPieces, saved_states, toPlay)
         if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
             isPromotion = True
         makeMove(myMove[0], myMove[1], myMove[2], isPromotion)

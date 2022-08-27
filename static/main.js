@@ -38,7 +38,7 @@ function drawBoard() {
         if (lastMove.length > 0 && ((lastMove[0][0] == yb && lastMove[0][1] == xb) || (lastMove[1][0] == yb && lastMove[1][1] == xb)))
             ctx.fillStyle = ["#CDD16A", "#AAA23B"][(i+Math.floor(i/8))%2];
         if (gameRes == 1 && board[yb][xb] == 9-3*toPlay)
-            ctx.fillStyle = "#CC2200";
+            ctx.fillStyle = "#992200";
         if (gameRes == 2 && (board[yb][xb] == 6 || board[yb][xb] == 12))
             ctx.fillStyle = "#CCCC00";
         ctx.fillRect(margin+(w/8.0)*x, margin+(w/8.0)*y, w/8.0, w/8.0);
@@ -55,7 +55,7 @@ function drawBoard() {
         if ((playerPromotion[0][1] == xb && playerPromotion[0][0] == yb) || (playerPromotion[1][1] == xb && playerPromotion[1][0] == yb))
             ctx.globalAlpha = 0.0;
         var piece = board[yb][xb];
-        if (piece > 0)
+        if (piece > 0 && startedFirstGame)
             ctx.drawImage(piece_textures[piece-1], margin+(w/8.0)*x, margin+(w/8.0)*y, (w/8.0), (w/8.0));
         ctx.globalAlpha = 1.0;
     }
@@ -77,7 +77,7 @@ function drawBoard() {
         ctx.arc(margin+(w/8.0)*(x+0.5), margin+(w/8.0)*(y+0.5), w/64.0, 0, 2*Math.PI);
         ctx.fill();
     }
-    ctx.font = 'bold 24px Arial';
+    ctx.font = 'bold '+Math.floor(36*full_w/900)+'px Arial';
     const letters = ['a','b','c','d','e','f','g','h'];
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -148,6 +148,7 @@ function drawTimer() {
     var flip = (players[-1] == 0 && (toPlay == -1 || players[1] != 0));
     ctx.fillStyle = "#333333";
     ctx.fillRect(full_w, 0, full_w*0.25, full_w);
+    ctx.fillStyle = "#334444";
     ctx.fillRect(full_w*1.015, full_w*0.09, full_w*0.22, full_w*0.12);
     ctx.fillRect(full_w*1.015, full_w*0.79, full_w*0.22, full_w*0.12);
     var grad = ctx.createLinearGradient(full_w*1.2, 0, full_w, full_w);
@@ -166,7 +167,7 @@ function drawTimer() {
         t1 = timeLeft[1];
         t2 = timeLeft[0];
     }
-    ctx.font = 'bold 36px Courier New';
+    ctx.font = 'bold '+Math.floor(36*full_w/700)+'px Courier New';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = "#000000";
@@ -177,6 +178,43 @@ function drawTimer() {
     if ((gameRes == 0 || (t2 <= 0 && t2 != UNLIMITED_TIME)) && ((!flip && toPlay == 1) || (flip && toPlay == -1)))
         ctx.fillStyle = "#CC0000";
     ctx.fillText(formatTime(t2), full_w*1.125, full_w*0.85);
+    if (gameRes == 0 && (players[1] == 0 || players[-1] == 0)) {
+        ctx.fillStyle = "#334444";
+        ctx.fillRect(full_w*1.025, full_w*0.6, full_w*0.09, full_w*0.09);
+        ctx.fillRect(full_w*1.135, full_w*0.6, full_w*0.09, full_w*0.09);
+        ctx.fillStyle = "#CCFFFF";
+        ctx.fillRect(full_w*1.03, full_w*0.605, full_w*0.08, full_w*0.08);
+        if (wantsDraw[toPlay == 1 ? 0 : 1] || (wantsDraw[toPlay == 1 ? 1 : 0] && players[toPlay] != 0))
+            ctx.fillStyle = "#77BBBB";
+        else if (wantsDraw[toPlay == 1 ? 1 : 0])
+            ctx.fillStyle = "#33FFFF";
+        ctx.fillRect(full_w*1.14, full_w*0.605, full_w*0.08, full_w*0.08);
+        ctx.fillStyle = "#334444";
+        ctx.strokeStyle = "#334444";
+        ctx.lineWidth = full_w*0.003;
+        ctx.beginPath();
+        ctx.moveTo(full_w*1.05, full_w*0.67);
+        ctx.lineTo(full_w*1.04, full_w*0.62);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(full_w*1.045, full_w*0.62);
+        ctx.quadraticCurveTo(full_w*1.05, full_w*0.63, full_w*1.065, full_w*0.6225);
+        ctx.quadraticCurveTo(full_w*1.07, full_w*0.615, full_w*1.085, full_w*0.625);
+        ctx.lineTo(full_w*1.09, full_w*0.65);
+        ctx.quadraticCurveTo(full_w*1.075, full_w*0.64, full_w*1.07, full_w*0.6475);
+        ctx.quadraticCurveTo(full_w*1.065, full_w*0.655, full_w*1.05, full_w*0.645);
+        ctx.lineTo(full_w*1.045, full_w*0.62);
+        ctx.fill();
+        ctx.stroke();
+        ctx.lineWidth = 4;
+        ctx.font = ''+Math.floor(24*full_w/900)+'px Courier New';
+        ctx.strokeText('1', full_w*1.16, full_w*0.635);
+        ctx.beginPath();
+        ctx.moveTo(full_w*1.15, full_w*0.675);
+        ctx.lineTo(full_w*1.21, full_w*0.615);
+        ctx.stroke();
+        ctx.strokeText('2', full_w*1.2, full_w*0.655);
+    }
 }
 function clickBoard(event) {
     if (gameRes == 0) {
@@ -186,6 +224,8 @@ function clickBoard(event) {
         var margin = full_w*0.05;
         var square = (full_w-2*margin)/8.0;
         if (playerPromotion[2] == -1) {
+            var raw_x = (event.clientX-rect.left)/full_w;
+            var raw_y = (event.clientY-rect.top)/full_w;
             var x = Math.floor((event.clientX-margin-rect.left)/square);
             var y = Math.floor((event.clientY-margin-rect.top)/square);
             if (flip) {
@@ -205,6 +245,12 @@ function clickBoard(event) {
                 }
                 drawBoard();
             })
+            if (1.025 <= raw_x && raw_x <= 1.115 && 0.6 <= raw_y && raw_y <= 0.69 && players[toPlay] == 0) {
+                resign();
+            }
+            if (1.135 <= raw_x && raw_x <= 1.225 && 0.6 <= raw_y && raw_y <= 0.69 && players[toPlay] == 0) {
+                askDraw();
+            }
         } else {
             var x = (event.clientX-margin-rect.left)/square;
             var y = (event.clientY-margin-rect.top)/square;
@@ -257,6 +303,8 @@ function dragBoard(event) {
         var full_w = canvas.height/CANVAS_SCALE;
         var margin = full_w*0.05;
         var square = (full_w-2*margin)/8.0;
+        var raw_x = (event.clientX-rect.left)/full_w;
+        var raw_y = (event.clientY-rect.top)/full_w;
         var x = (event.clientX-margin-rect.left)/square;
         var y = (event.clientY-margin-rect.top)/square;
         if (playerPromotion[2] == -1) {
@@ -268,12 +316,15 @@ function dragBoard(event) {
                 x = 7-x;
                 y = 7-y;
             }
-            if (players[toPlay] == 0 && 0 <= x && x <= 7 && 0 <= y && y <= 7 && PIECE_SIDE[board[y][x]] == toPlay) {
+            if (players[toPlay] == 0 && ((0 <= x && x <= 7 && 0 <= y && y <= 7 && PIECE_SIDE[board[y][x]] == toPlay)
+            || (1.025 <= raw_x && raw_x <= 1.115 && 0.6 <= raw_y && raw_y <= 0.69)
+            || (1.135 <= raw_x && raw_x <= 1.225 && 0.6 <= raw_y && raw_y <= 0.69
+                && !(wantsDraw[toPlay == 1 ? 0 : 1])))) {
                 canvas.style.cursor = "pointer";
             } else {
                 canvas.style.cursor = "default";
             }
-        drawBoard();
+            drawBoard();
         } else {
             if ((1.5 <= x && x <= 3.5 && 1.5 <= y && y <= 3.5) ||
             (1.5 <= x && x <= 3.5 && 4.5 <= y && y <= 6.5) ||
@@ -284,6 +335,8 @@ function dragBoard(event) {
                 canvas.style.cursor = "default";
             }
         }
+    } else {
+        canvas.style.cursor = "default";
     }
 }
 function touchBoard(event) {
@@ -339,9 +392,11 @@ var dragging = [-1,-1];
 var dragPos = [-1, -1];
 const UNLIMITED_TIME = -100*60;
 var timeLeft = [UNLIMITED_TIME, UNLIMITED_TIME];
+var wantsDraw = [false, false];
 var increment = 0;
 var playerPromotion = [-1, -1, -1];
 var timer;
+var startedFirstGame = false;
 const PIECE_SIDE = [0,1,1,1,1,1,1,-1,-1,-1,-1,-1,-1];
 
 function board_to_arg(b) {
@@ -397,12 +452,11 @@ async function makeMove(start, end, promotion) {
             toPlay *= -1;
             lastMove = [start,end];
             var msg = myJson['messages'];
-            var res = myJson['res'];
             checkSquare = myJson['check'];
             states.push([board,movedPieces]);
             drawBoard();
             drawTimer();
-            if (res == 0)
+            if (gameRes == 0)
                 getNextMove();
             for (var i = 0; i < msg.length; i++)
                 console.log(msg[i]);
@@ -427,6 +481,7 @@ function tickTimer() {
     if (gameRes != 0) {
         window.clearInterval(timer);
         drawBoard();
+        document.settings.style.visibility = '';
     }
     drawTimer();
 }
@@ -452,7 +507,21 @@ async function getNextMove() {
             "states": states_to_arg(states), "time": playTime})
             .then((move) => makeMove(move['start'], move['end'], move['promotion']));
             break;
+        case 3:
+            getPython("policy", {"board": board_to_arg(board), "moved": moved_to_arg(movedPieces),
+            "turn": toPlay, "states": states_to_arg(states)})
+            .then((move) => makeMove(move['start'], move['end'], move['promotion']));
+            break;
     }
+}
+
+function askDraw() {
+    wantsDraw[toPlay == 1 ? 0 : 1] = true;
+    if (wantsDraw[0] && wantsDraw[1])
+        gameRes = 2;
+}
+function resign() {
+    gameRes = 1;
 }
 
 function startGame() {
@@ -461,11 +530,14 @@ function startGame() {
     lastMove = [];
     checkSquare = [-1, -1];
     states = [[DEFAULT_BOARD, []]];
+    wantsDraw = [false, false];
     toPlay = 1;
     fifty_move_counter = 50;
     gameRes = 0;
     window.clearInterval(timer);
     timer = setInterval(tickTimer, 100);
+    document.settings.style.visibility = 'hidden';
+    startedFirstGame = true;
     drawBoard();
     drawTimer();
     getNextMove();
@@ -481,7 +553,7 @@ function startFromForm() {
 }
 
 function whenResize() {
-    var size = Math.min(window.innerWidth*0.75, window.innerHeight*0.8);
+    var size = Math.min(document.getElementById("boardHolder").clientWidth*0.75, window.innerHeight*0.8);
     canvas.style.width = (size*1.25)+'px';
     canvas.style.height = size+'px';
     canvas.width = size*1.25*CANVAS_SCALE;
