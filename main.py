@@ -14,7 +14,7 @@ import os
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 4, -1: 4}
+players = {1: 2, -1: 1}
 FLIP_BOARD = (players[-1] == 0)
 DEBUG = False
 UNTRAINED_MODEL = False

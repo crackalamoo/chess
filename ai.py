@@ -137,7 +137,7 @@ def monteCarlo(model, b, mp, turn, states, timeLimit):
         for i in range(len(states)):
             sim_states.append(states[i])
         curr_state = sim_states[len(sim_states)-1]
-        while not node.is_leaf():
+        while not node.is_leaf:
             node = node.visit_child(model, t, sim_states)
             nm = nn_to_move(node.move, t)
             curr_state = chess.afterMove(curr_state[0], curr_state[1], nm[0], nm[1])

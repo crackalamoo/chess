@@ -512,6 +512,14 @@ async function getNextMove() {
             "turn": toPlay, "states": states_to_arg(states)})
             .then((move) => makeMove(move['start'], move['end'], move['promotion']));
             break;
+        case 4:
+            var playTime = Math.floor(timeLeft[player]*1000);
+            if (timeLeft[player] == UNLIMITED_TIME)
+                playTime = 100000;
+            getPython("hybrid", {"board": board_to_arg(board), "moved": moved_to_arg(movedPieces), "turn": toPlay,
+            "states": states_to_arg(states), "time": playTime})
+            .then((move) => makeMove(move['start'], move['end'], move['promotion']));
+            break;
     }
 }
 

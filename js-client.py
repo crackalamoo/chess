@@ -88,6 +88,24 @@ def js_policy():
     res = ai.policy_ai(nn_model, b, mp, states, turn)
     return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
 
+@app.route('/hybrid')
+def js_hybrid():
+    b = arg_to_board(request.args.get('board'))
+    mp = arg_to_moved(request.args.get('moved'))
+    states = arg_to_states(request.args.get('states'))
+    turn = int(request.args.get('turn'))
+    time = int(request.args.get('time'))
+    time = int(time/max(20.0, 25.0-len(states)/2.0))
+    time = min(time, 8000)
+    if len(states) <= 6:
+        time = min(time, 6000)
+    if len(states) <= 4:
+        time = min(time, 4500)
+    if 20 <= len(states) <= 46:
+        time = int(time*1.25)
+    res = ai.hybrid_ai(nn_model, b, mp, states, turn, int(time/100)/10.0)
+    return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
+
 
 @app.route('/validmoves')
 def js_validMoves():

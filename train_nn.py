@@ -8,7 +8,7 @@ print("Loaded modules")
 BATCH_SIZE = 256
 NUM_EPOCHS = 1
 TEST_SIZE = 20000
-DATA_FILE = "data/gm2.npz" # done gm1, gm2
+DATA_FILE = "data/gm5.npz" # done gm1, gm2, gm3, gm4, gm5
 LOAD_MODEL = True
 
 class TrainCallback(tf.keras.callbacks.Callback):
@@ -64,7 +64,7 @@ def test_model(model):
             print(test_X0[i])
             print(nn_to_move(pred, 1), nn_to_move(actual, 1))
     print(wrong/float(1000))
-test_model(model)
+#test_model(model)
 
 print("Evaluating model (before training)")
 results = model.evaluate(test_X0, test_y, batch_size=BATCH_SIZE)

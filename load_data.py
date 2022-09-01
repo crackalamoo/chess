@@ -3,8 +3,8 @@ import chess_core as chess
 import tensorflow as tf
 from ai import pgn_to_move, ai_input, move_to_nn
 
-START_GAME = 20000*3
-END_GAME = 20000*4
+START_GAME = 20000*7
+END_GAME = 20000*8
 
 train_X0 = [] # board states
 #train_X1 = [] # extra info (color, threefold repetition)
@@ -12,7 +12,7 @@ train_y = [] # policy
 #train_y1 = [] # win probability
 #FILENAME = 'data/lichess_arifd2.pgn'
 FILENAME = 'data/RecentGames.pgn'
-SAVETO = 'data/gm4'
+SAVETO = 'data/gm8'#.npz
 
 def move_pgn(pgn, b, mp, turn):
     move = pgn_to_move(pgn, b, mp, turn)
@@ -23,7 +23,7 @@ def playGame(game, termination):
     turn = 1
     sb = [chess.DEFAULT_BOARD, []] # simulated board
     if not termination == "[Termination \"Normal\"]":
-        return
+        return 0
     game = game.replace('\n', '').replace(". ", ".").replace(".", ". ")
     game = game.split(" ")
     res = game.pop(len(game)-1)
@@ -43,6 +43,7 @@ def playGame(game, termination):
             train_y.append(move_to_nn(move[0], move[1], turn))
             #train_y1.append(res*turn) # win for this player
         turn *= -1
+    return 1
 def playGames(start, num):
     print("Loading " + FILENAME)
     data = open(FILENAME).read().replace('\r','\n').split('\n')
@@ -57,12 +58,11 @@ def playGames(start, num):
             if n >= start:
                 game = data[l]
                 i = 1
-                while not data[l+i].startswith("[Event"):
+                while l+i < len(data) and not data[l+i].startswith("[Event"):
                     game += data[l+i]
                     i += 1
                 #playGame(game, data[l-2])
-                playGame(game, "[Termination \"Normal\"]")
-                played += 1
+                played += playGame(game, "[Termination \"Normal\"]")
             n += 1
             print("  "+str(n-start)+"/"+str(num-start) + " ("+str(int((n-start)/(num-start)*100))+"%) ", end='\r')
     print("Played through " + str(played) + " games (" + str(len(train_y)) + " positions)")
