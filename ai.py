@@ -9,9 +9,9 @@ import time
 logging.disable(logging.WARNING)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-T_PLY = 4 # number of ply to analyze
+T_PLY = 1 # number of ply to analyze
  
-def minimax_ai(b, mp, states, turn, time=7500):
+def minimax_ai(b, mp, states, turn, time=8000):
     return chess.minimax(states, b, mp, turn, 2, time, True)
 
 def nn_ai(model, b, mp, states, turn, time=5.0):
@@ -257,7 +257,7 @@ def define_model():
     b = Flatten()(b)
     r0 = residual_block(input, (3,3), 12*T_PLY, reg)
     r1 = residual_block(input, (5,5), 12*T_PLY, reg)
-    for i in range(8):
+    for i in range(7):
         r0 = residual_block(r0, (3,3), 12*T_PLY, reg)
         #r1 = residual_block(r1, (5,5), 12*T_PLY, reg)
     r0 = GlobalAveragePooling2D()(r0)

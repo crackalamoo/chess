@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>BrickChess0.5</title>
+<title>BrickChess0.5 Lite</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" >
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta charset="utf-8">
@@ -21,7 +21,7 @@
 <base href="http://harysdalvi.com/sub/chess/">
 </head>
 <body>
-<h1 class="title">BrickChess0.5</h1>
+<h1 class="title">BrickChess0.5 Lite</h1>
 <h3 class="author">
     <a href="http://harysdalvi.com">Harys Dalvi</a>
 </h3>
@@ -65,6 +65,173 @@
 <div id="boardHolder">
 <canvas id="board"></canvas>
 </div><br><br><br>
+
+<p>This is by far the most intensive project I have ever done. First, some quick general notes.
+This is BrickChess0.5 Lite, an online chess engine. The full version is on
+<a href="https://github.com/crackalamoo/chess" target="_blank">GitHub</a>. The Brick is because
+many iterations of this engine, including arguably the current lite one, have been as dumb as a brick.
+The Chess is because it plays chess. The 0.5 is because
+parts of this engine are inspired by AlphaZero, which learns chess from zero. This engine
+does make its own moves, but does not learn from zero, so it is 0.5. </p>
+<p>You can play chess with this engine, but you will find it stops responding after a few moves. This
+    is because the CPU of my website does not have enough space to run my program. Unfortunately,
+    there's not much I can do about that. The CPU is in some unidentified location in North America,
+    so I can't make modifications.
+</p>
+<p>The full version of this project has a lot of parts, so I'll try to introduce them one by one in the order
+    I developed them.
+</p>
+<h2>Chess Core</h2>
+<p>I started with the chess core: code to handle legal chess moves and store the board, but without any AI yet.
+    This was surprisingly difficult: chess has many moves like castling, en passant, and pawn promotions that
+    require extra attention in the code. Eventually, I was able to make the core and play against myself.
+    Determining valid moves was done in <strong>C++</strong>, while the frontend engine (displaying the board and
+    taking user input) was done in <strong>Python</strong>.
+</p>
+<p>Of course, I had to connect the C++ and Python components. This was a challenge in itself. I used the <strong><code>ctypes</code></strong>
+    Python module which is designed for this purpose so I could call C++ functions from Python.
+</p>
+<h2>Minimax AI</h2>
+<p>This is the AI you see on this website. The minimax algorithm for chess assigns a <strong>score</strong> to each position,
+    positive scores being in favor of white, negative scores being in favor of black. It then assumes that
+    each side will play the best move: black will try to <strong>mini</strong>mize the score, while white will try to
+    <strong>max</strong>imize the score. This is where the name <strong>minimax</strong> comes from.
+</p>
+<p>I had experience with minimax before, both with chess when I was younger and with
+    <a href="http://www.harysdalvi.com/projects/blackqueen">Black Queen</a> (cards) on this site.
+    However, this is the most detailed minimax algorithm I've done.
+</p>
+<p>The <strong>score</strong> is basically calculated by summing up the material for each size: each pawn counts as 100
+    <strong>centipawns</strong>, a rook is 500, and so on. These values are negative for black pieces. On top of this,
+    the score uses <strong>piece-square tables</strong> for each piece to incentivize moving the pieces to certain squares.
+    For example, knights come to the center, while kings try to castle. I also added small bonuses for checks and captures,
+    and incentivized developing pieces such as knights and bishops but not kings and queens. The basics of my piece-square tables
+    were taken from the Chess Programming Wiki [<a href="#ref" id="src1">1</a>], and I added some of my own judgement to that through playing with my engine. 
+</p>
+<p>At first I went three <strong>ply</strong> deep, but I found this to be too slow. (A &ldquo;ply&rdquo; is a half-move in chess,
+    so either a white move or a black move. A full &ldquo;move&rdquo; in chess is considered to include moves for both white and black.)
+    I optimized my engine by reducing the depth to just two ply, but added <strong>extensions</strong>: whenever there was a check or capture by
+    either side, I might expand on that branch up to 4 ply, depending on how much time was left. I also incentivized captures where
+    the material is left unchanged (an exchange) because this means that neither side is sacrificing something, so more analysis is needed
+    to see if the move is good or bad.
+</p>
+<p>Another optimization I did was <strong>alpha-beta pruning</strong>. This optimization depends on the idea that each player will make
+    their best move. Therefore, when you find a move worse than one you saw earlier, you can discard it immediately and not go down that line.
+    While this kind of pruning speeds up the search, it does not sacrifice any accuracy.
+</p>
+<p>One unexpectedly hard part of this was <strong>time management</strong>. I wanted the AI to take enough time to make a good move,
+    but not too much time. An especially big problem is that sometimes the AI runs out of time, so it picks a horrible
+    move since it hasn't yet seen all the available moves even on the first ply. This problem is reduced when playing longer games
+    with more time available to the AI.
+</p>
+<div class="endfloat">
+    <img src="static/img/checkmate.png">
+    <p class="caption">The AI winning with checkmate for black. Almost every piece is necessary for this checkmate.</p>
+</div>
+<p>Another problem was that if the AI was winning, it had trouble finding the checkmate because it didn't have enough depth and was still
+    trying to protect its king. Therefore, I made the AI bring its king out if the queens were off the board. I also made it bring its main
+    pieces closer to the opponent king, and also made it bring the king
+    closer to the opponent king if it was winning by a large margin. This helped, and it was able to find some interesting and
+    convoluted checkmates.
+</p>
+<h2>Graphics</h2>
+<p>At this point, my &ldquo;graphics&rdquo; were still Terminal unicode text. I used the <strong><code>python-chess</code></strong>
+    module to create SVG images of my board, and I used <strong><code>PyQt5</code></strong> to display the graphics in a window.
+    This was also a challenge, because the window display took priority over calling the chess AI functions. I was able to solve
+    that using <strong><code>threading</code></strong>.
+</p>
+<div class="middleimg"><img src="static/img/graphics.png"></div>
+<h2>Neural Network</h2>
+<p>I tried adding a neural network AI as well. My neural network was largely inspired by <strong>AlphaZero</strong> [<a href="#ref" id="src2">2</a>], with some
+    of my own ideas. AlphaZero uses a form of <strong>residual neural network</strong> based on <strong>convolutional neural networks</strong>.
+    Convolutional neural networks are a common tool for analyzing images. A chessboard is a little like an image, so this architecture was suited
+    for the task. <strong>Leela Chess Zero</strong> [<a href="#ref" id="src3">3</a>], another engine inspired by AlphaZero, used convolution with 3x3 filters. I felt like a lot
+    of chess takes place over an area larger than just 3x3 squares, so I used a similar 3x3 analysis as Leela Chess Zero while also adding a less deep
+    5x5 analysis.
+</p>
+<p>A residual neural network allows some data to skip over the convolutional layers and be processed as-is. This allows making deeper networks
+    without running into some of the problems that other deep networks have. I used 8 residual blocks for the 3x3 convolution, and one for the 5x5
+    convolution.
+</p>
+<p>The AlphaZero network has two parts to it: a <strong>policy</strong> network and a <strong>value</strong> network. The policy network
+    predicts which moves are most promising and goes down those paths. The value network predicts the probability of winning for each
+    position. I had trouble getting the value network to work, so I used only a policy network. The output of this policy network has 4096
+    neurons. The way I used this was 64 squares to pick up a piece from, and 64 squares to place it, for a total of 64×64=4096. AlphaZero
+    used a different system considering queen and knight moves, as all other moves in chess are subsets of these.
+</p>
+<p>The input to AlphaZero consists of not only the current board state, but also some of the board history and flags for special rules such as
+    threefold repetition. To speed things up, I used only the current board state. I also flipped the board and swapped the colors for black's move.
+    This way, the network would think in terms of my pieces and enemy pieces, rather than white and black. This helps build a consistent
+    strategy for the two sides.
+</p>
+<p>AlphaZero learned chess by playing with itself starting with zero knowledge besides the rules of chess, hence the &ldquo;zero&rdquo; in the name.
+    While inspired by AlphaZero, BrickChess0.5 trained on a database of grandmaster games including players such as Magnus Carlsen,
+    hence the &ldquo;0.5&rdquo; in the name.
+</p>
+<p>While the policy network predicts which moves look most promising, the AI does not use only this. There is also a <strong>Monte Carlo Tree
+    Search</strong> (MCTS) [<a href="#ref" id="src4">4</a>] which follows the most promising moves, as well as some less promising moves, and finds the average probability
+    of winning for each move over many lines. While AlphaZero used its value network to estimate this probability, I used the same
+    scoring function as my minimax AI.
+</p>
+<p>There were also many ideas that I tried but ultimately cut out. One of these was including the valid moves for each side as part of the input
+    to the neural network. However, this took too long to calculate: I once spent an entire day just waiting for the program to complete,
+    without doing anything productive.
+    It was impractical to load all this data from the grandmaster games. I also tried considering previous moves like AlphaZero, and while this
+    led to high accuracy in theory on the validation data, I found that the AI was playing like a brick when I tested it. Its few decent moves
+    came from the Monte Carlo Tree Search based on my C++ scoring function rather than the neural network. When I played to test the policy network
+    alone, it was essentially playing random moves.
+</p>
+<h2>Local Web Client</h2>
+<p>It's hard to express in words how frustrating this part of development was. I wanted to give up many, many times. The only reason I continued is
+    that I had been planning a web client for so long I felt like I couldn't give up. In the end, I finally succeeded.
+</p>
+<p>To make the web client, I used <strong><code>flask</code></strong>. This is a Python library that allows hosting web servers, and it can also
+    be connected to JavaScript. After trying many different failed ideas, I finally connected the two. I also added a timer system on the
+    JavaScript end and an interactive board.
+</p>
+<p>Now that I had my localhost server running, all I had to do was upload the code to my website. Then I could easily build the chess engine
+    you're seeing now.
+</p>
+<h2>Live Web Client</h2>
+<p>Unfortunately, building things is rarely that easy, and backend is never that easy. I spent a few days figuring out how to host my chess
+    engine, and I had to make so many sacrifices that I downgraded this online version to Lite. One reason for the downgrade is that my
+    website server didn't have enough space for tensorflow, so I couldn't include the neural network online. Another reason is that
+    it didn't even have enough CPU space to play a full game. It tends to stop responding shortly after the opening, and I don't really have
+    a way to fix it other than buying more space, which probably isn't worth it.
+</p>
+<p>Backend is hard.
+</p>
+<p>Before I knew the lack of CPU space was the problem, my debugging led to something very funny and unusual: I accidentally DDoS'd my own website.
+    Or more technically I just DoS'd it. I tried adding code to retry if a request failed, but this ended up sending hundreds of requests
+    and temporarily crashing my server.
+</p>
+<p>In the end I succeeded to at least build this Lite version using a cPanel Python app along with <code>flask</code>. So it may not play perfectly,
+    but what you're seeing here is technically an HTML site, connected to a JavaScript client, connected to a Python server, connected to
+    C++ functions for AI and making moves.
+</p>
+<p>Apparently my website can't quite handle that. For the full version, which actually plays a decent game sometimes, see my GitHub repository.
+    Although not everything worked out, I learned about connecting different programming languages, hosting backend servers, tree search
+    and neural network AIs, and data analysis.
+</p>
+<p>I feel like this article should be longer considering that I worked on it for almost a month. However, a lot of it was
+    just painful debugging and trying many different ideas, without any interesting thought process to speak of. So that's the end
+    of this post. If you would like to play a full game with my engine, download BrickChess0.5 from GitHub.
+</p>
+<h2 id="ref">References</h2>
+The GitHub repository for this project, including the full BrickChess0.5 rather than the Lite version,
+is at <a href="https://github.com/crackalamoo/chess" target="_blank">crackalamoo/chess</a>.
+<ol>
+<li><a href="https://www.chessprogramming.org/Simplified_Evaluation_Function" target="_blank">Simplified Evaluation Function</a>
+    (Chess Programming Wiki) <a href="#src1">^</a></li>
+<li><a href="https://arxiv.org/pdf/1712.01815.pdf" target="_blank">Mastering Chess and Shogi by Self-Play with a General
+    Reinforcement Learning Algorithm</a> (Silver et al., DeepMind AlphaZero) <a href="#src2">^</a></li>
+<li><a href="https://lczero.org/dev/backend/nn/" target="_blank">Neural network topology</a>
+    (Leela Chess Zero) <a href="#src3">^</a></li>
+<li><a href="https://github.com/JoshVarty/AlphaZeroSimple" target="_blank">AlphaZeroSimple</a> (Josh Varty) <a href="#src4">^</a></li>
+</ol>
+<ul>
+<li><a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank">SVG chess pieces</a> (Wikimedia Commons, Cburnett, CC BY-SA 3.0 license)
+</ul>
 
 <div id="footer"></div>
 <script src="static/main.js"></script>

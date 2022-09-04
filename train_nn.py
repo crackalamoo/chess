@@ -5,11 +5,11 @@ import numpy as np
 
 print("Loaded modules")
 
-BATCH_SIZE = 1
+BATCH_SIZE = 16
 NUM_EPOCHS = 1
 TEST_SIZE = 20000
-DATA_FILE = "data/gm1.npz" # done 
-LOAD_MODEL = False
+DATA_FILE = "data/gm3.npz" # done gm1, gm2
+LOAD_MODEL = True
 
 class TrainCallback(tf.keras.callbacks.Callback):
     def __init__(self, m, tX0, ty):

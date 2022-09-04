@@ -56,7 +56,9 @@ def js_minimax():
         time = min(time, 6000)
     if len(states) <= 4:
         time = min(time, 4500)
-    if 20 <= len(states) <= 46:
+    if 6 < len(states) < 20:
+        time = int(time*1.5)
+    elif 20 <= len(states) <= 46:
         time = int(time*2)
     res = ai.minimax_ai(b, mp, states, turn, time)
     return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
@@ -164,4 +166,4 @@ def js_makeMove():
 
 # main driver function
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='localhost', port='8000')

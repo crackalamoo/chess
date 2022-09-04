@@ -1,4 +1,3 @@
-import numpy as np
 import ai
 if __name__ == "__main__":
     import chess as py_chess
@@ -14,7 +13,7 @@ import os
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 3, -1: 3}
+players = {1: 3, -1: 3} # 0: human; 1: minimax; 2: MCTS; 3: policy; 4: hybrid
 FLIP_BOARD = (players[-1] == 0)
 DEBUG = False
 UNTRAINED_MODEL = False

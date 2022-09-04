@@ -3,8 +3,8 @@ import chess_core as chess
 import tensorflow as tf
 from ai import pgn_to_move, ai_input, move_to_nn
 
-START_GAME = 20000*0
-END_GAME = 20000*0.25
+START_GAME = 20000*2
+END_GAME = 20000*3
 
 train_X0 = [] # board states
 #train_X1 = [] # extra info (color, threefold repetition)
@@ -12,7 +12,7 @@ train_y = [] # policy
 #train_y1 = [] # win probability
 #FILENAME = 'data/lichess_arifd2.pgn'
 FILENAME = 'data/RecentGames.pgn'
-SAVETO = 'data/gm5000'#.npz
+SAVETO = 'data/gm3'#.npz
 
 def move_pgn(pgn, b, mp, turn):
     move = pgn_to_move(pgn, b, mp, turn)

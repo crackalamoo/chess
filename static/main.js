@@ -349,7 +349,11 @@ function touchBoard(event) {
     }
 }
 
-const SERVER_URL = 'http://www.harysdalvi.com/chess/';
+if (location.hostname == "localhost") {
+    var SERVER_URL = 'http://localhost:8000/';
+} else {
+    var SERVER_URL = 'http://www.harysdalvi.com/chess/';
+}
 
 async function getPython(pyfunc, args={}) {
     var argstring = '';
@@ -420,7 +424,7 @@ function square_to_arg(s) {
 }
 function states_to_arg(st) {
     s = "";
-    for (var i = 0; i < st.length; i++) {
+    for (var i = Math.max(st.length-4, 0); i < st.length; i++) {
         s += board_to_arg(st[i][0]);
         s += "s";
         s += moved_to_arg(st[i][1]);

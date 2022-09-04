@@ -815,9 +815,11 @@ extern "C" int minimax(GameState states[], int statesSize, GameState s, int turn
     root->trueDepth = searchDepth;
     root->material = evaluateMaterial(s);
     int score0 = evaluateState(s);
-    cout << "score: " << score0 << endl;
+    //cout << "score: " << score0 << endl;
     start_calc = get_millis();
+    cout << "a" << endl;
     alphaBeta(states, statesSize, s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
+    cout << "b" << endl;
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
     //cout << "res = " << res << endl;
     delete root;
