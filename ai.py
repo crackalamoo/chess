@@ -257,9 +257,9 @@ def define_model():
     b = Flatten()(b)
     r0 = residual_block(input, (3,3), 12*T_PLY, reg)
     r1 = residual_block(input, (5,5), 12*T_PLY, reg)
-    for i in range(4):
+    for i in range(8):
         r0 = residual_block(r0, (3,3), 12*T_PLY, reg)
-        r1 = residual_block(r1, (5,5), 12*T_PLY, reg)
+        #r1 = residual_block(r1, (5,5), 12*T_PLY, reg)
     r0 = GlobalAveragePooling2D()(r0)
     r1 = GlobalAveragePooling2D()(r1)
 

@@ -10,6 +10,10 @@
 #include <cmath>
 using namespace std;
 
+#ifndef nullptr
+#define nullptr 0
+#endif
+
 const int PIECE_VAL[] = { 0, 100, 320, 330, 500, 900, 20000, -100, -320, -330, -500, -900, -20000 };
 const int SIMPLIFIED_PIECE_VAL[] = {0, 100, 300, 300, 500, 900, 20000, -100, -300, -300, -500, -900, -20000};
 const int PIECE_SIDE[] = { 0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1 };

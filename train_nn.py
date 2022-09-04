@@ -5,11 +5,11 @@ import numpy as np
 
 print("Loaded modules")
 
-BATCH_SIZE = 256
+BATCH_SIZE = 1
 NUM_EPOCHS = 1
 TEST_SIZE = 20000
-DATA_FILE = "data/gm5.npz" # done gm1, gm2, gm3, gm4, gm5
-LOAD_MODEL = True
+DATA_FILE = "data/gm1.npz" # done 
+LOAD_MODEL = False
 
 class TrainCallback(tf.keras.callbacks.Callback):
     def __init__(self, m, tX0, ty):
@@ -76,6 +76,7 @@ history = model.fit(
     train_y,
     batch_size=BATCH_SIZE,
     epochs=NUM_EPOCHS,
+    shuffle=True,
     callbacks=[TrainCallback(model, test_X0, test_y)]
 )
 

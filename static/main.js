@@ -6,7 +6,7 @@ var piece_textures = [];
 var validMoves = [];
 for (var i = 1; i <= 12; i++) {
     var texture = new Image();
-    texture.src = "static/img/"+i+".svg.png";
+    texture.src = "http://harysdalvi.com/sub/chess/static/img/"+i+".svg.png";
     piece_textures.push(texture);
 }
 
@@ -349,7 +349,7 @@ function touchBoard(event) {
     }
 }
 
-const SERVER_URL = 'http://localhost:8000/';
+const SERVER_URL = 'http://www.harysdalvi.com/chess/';
 
 async function getPython(pyfunc, args={}) {
     var argstring = '';

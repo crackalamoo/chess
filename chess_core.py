@@ -1,6 +1,6 @@
 import ctypes
-import numpy as np
 from math import *
+from os import path
 
 DEFAULT_BOARD =[[10,8, 9,11,12, 9, 8,10],
                 [7, 7, 7, 7, 7, 7, 7, 7],
@@ -78,8 +78,8 @@ def pythonMoved(state):
     return mp
 
 
-
-chessFuncs = ctypes.CDLL('_chess.so')
+chessDir = path.abspath('_chess.so')
+chessFuncs = ctypes.cdll.LoadLibrary(chessDir)
 cpp_afterMove = chessFuncs.afterMove
 cpp_afterMove.restype = GameState
 cpp_validMove = chessFuncs.validMove
