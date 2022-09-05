@@ -8,7 +8,7 @@ print("Loaded modules")
 BATCH_SIZE = 16
 NUM_EPOCHS = 1
 TEST_SIZE = 20000
-DATA_FILE = "data/gm3.npz" # done gm1, gm2
+DATA_FILE = "data/gm8.npz" # done gm1, gm2, gm3, gm4, gm5, gm6, gm7, gm8
 LOAD_MODEL = True
 
 class TrainCallback(tf.keras.callbacks.Callback):

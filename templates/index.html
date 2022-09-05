@@ -166,7 +166,7 @@ does make its own moves, but does not learn from zero, so it is 0.5. </p>
 </p>
 <p>AlphaZero learned chess by playing with itself starting with zero knowledge besides the rules of chess, hence the &ldquo;zero&rdquo; in the name.
     While inspired by AlphaZero, BrickChess0.5 trained on a database of grandmaster games including players such as Magnus Carlsen,
-    hence the &ldquo;0.5&rdquo; in the name.
+    hence the &ldquo;0.5&rdquo; in the name. For each game, BrickChess0.5 trained only on the winner's moves.
 </p>
 <p>While the policy network predicts which moves look most promising, the AI does not use only this. There is also a <strong>Monte Carlo Tree
     Search</strong> (MCTS) [<a href="#ref" id="src4">4</a>] which follows the most promising moves, as well as some less promising moves, and finds the average probability
@@ -180,6 +180,10 @@ does make its own moves, but does not learn from zero, so it is 0.5. </p>
     led to high accuracy in theory on the validation data, I found that the AI was playing like a brick when I tested it. Its few decent moves
     came from the Monte Carlo Tree Search based on my C++ scoring function rather than the neural network. When I played to test the policy network
     alone, it was essentially playing random moves.
+</p>
+<p>By making some modifications, I got the policy network making moves in a sometimes generally correct direction, but accuracy was only around
+    35%. The neural network program still relies on the MCTS. To make a more effective neural network, I would probably have to
+    work with a team rather than alone, because it's hard for me to catch my own mistakes.
 </p>
 <h2>Local Web Client</h2>
 <p>It's hard to express in words how frustrating this part of development was. I wanted to give up many, many times. The only reason I continued is
