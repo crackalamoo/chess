@@ -505,15 +505,8 @@ bool endgameState(GameState state) {
         for (int j = 0; j < 8; j++) {
             if (state.board[i][j] == 5 || state.board[i][j] == 11)
                 return false;
-            /* if (PIECE_SIDE[state.board[i][j]] == 1)
-                whiteVal += PIECE_VAL[state.board[i][j]];
-            if (PIECE_SIDE[state.board[i][j]] == -1)
-                blackVal -= PIECE_VAL[state.board[i][j]]; */
         }
     }
-    /* whiteVal -= PIECE_VAL[6];
-    blackVal += PIECE_VAL[12];
-    return (whiteVal <= 1300 && blackVal <= 1300); */
     return true;
 }
 
@@ -730,12 +723,6 @@ int alphaBeta(GameState states[], int statesSize, GameState state, int depth, in
     int bottomDepth = -1;
     if (timeLimit <= 5000)
         bottomDepth = 0;
-    /* if (timeLimit >= 10000 && moves.size() < 20)
-        bottomDepth = -2;
-    if (timeLimit >= 10000)
-        bottomDepth = -3;
-    if (timeLimit >= 15000)
-        bottomDepth = -4; */
     for (int i = 0; i < moves.size(); i++) {
         GameState newState = afterVecMove(state, moves.at(i));
         int nextDepth = depth-1;
@@ -815,13 +802,11 @@ extern "C" int minimax(GameState states[], int statesSize, GameState s, int turn
     root->trueDepth = searchDepth;
     root->material = evaluateMaterial(s);
     int score0 = evaluateState(s);
-    //cout << "score: " << score0 << endl;
     start_calc = get_millis();
     cout << "a" << endl;
     alphaBeta(states, statesSize, s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
     cout << "b" << endl;
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
-    //cout << "res = " << res << endl;
     delete root;
     return res;
 }

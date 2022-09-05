@@ -259,11 +259,9 @@ def define_model():
     r1 = residual_block(input, (5,5), 12*T_PLY, reg)
     for i in range(7):
         r0 = residual_block(r0, (3,3), 12*T_PLY, reg)
-        #r1 = residual_block(r1, (5,5), 12*T_PLY, reg)
     r0 = GlobalAveragePooling2D()(r0)
     r1 = GlobalAveragePooling2D()(r1)
 
-    #conv = Concatenate(axis=1)([r0,r1])
     hidden = Concatenate(axis=1)([r0,r1,b])
     policy = Dense(4096, activation='softmax')(hidden)
 

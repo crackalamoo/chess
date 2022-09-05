@@ -1,11 +1,7 @@
-# Importing flask module in the project is mandatory
-# An object of Flask class is our WSGI application.
 from flask import Flask
 from chess_core import *
 import ai
  
-# Flask constructor takes the name of
-# current module (__name__) as argument.
 app = Flask(__name__)
  
 from flask import jsonify, request, render_template

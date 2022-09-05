@@ -13,7 +13,7 @@ import os
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 3, -1: 3} # 0: human; 1: minimax; 2: MCTS; 3: policy; 4: hybrid
+players = {1: 1, -1: 1} # 0: human; 1: minimax; 2: MCTS; 3: policy; 4: hybrid
 FLIP_BOARD = (players[-1] == 0)
 DEBUG = False
 UNTRAINED_MODEL = False
@@ -66,24 +66,8 @@ def addState(b, mp):
 
 def displayBoard(b, turn, flip=False):
     if __name__ == "__main__":
-        #os.system('clear')
         print("")
         print("Move " + str(1+int(len(saved_states)/2)))
-        """
-        if flip:
-            for i in range(len(b)-1, -1, -1):
-                s = "  " + str(int(8-i)) + " "
-                for j in range(len(b[i])-1, -1, -1):
-                    s += piece_icons[b[i][j]]
-                print(s)
-            print("     h  g  f  e  d  c  b  a")
-        else:
-            for i in range(len(b)):
-                s = "  " + str(int(8-i)) + " "
-                for j in range(len(b[i])):
-                    s += piece_icons[b[i][j]]
-                print(s)
-            print("     a  b  c  d  e  f  g  h")"""
 
 
 def makeMove(start, end, promotion=5, isPromotion=False):
