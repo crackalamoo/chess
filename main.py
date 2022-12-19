@@ -1,5 +1,11 @@
 import ai
-if __name__ == "__main__":
+import sys
+
+pretty_board = True
+if (len(sys.argv) >= 4 and sys.argv[3] == "0") or not __name__ == "__main__":
+    pretty_board = False
+
+if pretty_board:
     import chess as py_chess
     import chess.svg
     import threading
@@ -7,13 +13,15 @@ if __name__ == "__main__":
     from PyQt5.QtSvg import QSvgWidget
     from PyQt5.QtWidgets import QApplication, QMainWindow
 from chess_core import *
-import sys
 import os
 
 movedPieces = []
 board = DEFAULT_BOARD
 toPlay = 1
-players = {1: 1, -1: 1} # 0: human; 1: minimax; 2: MCTS; 3: policy; 4: hybrid
+players = {1: 0, -1: 0} # 0: human; 1: minimax; 2: MCTS; 3: policy; 4: hybrid
+if len(sys.argv) >= 3:
+    players[1] = int(sys.argv[1])
+    players[-1] = int(sys.argv[2])
 FLIP_BOARD = (players[-1] == 0)
 DEBUG = False
 UNTRAINED_MODEL = False
@@ -27,7 +35,7 @@ if UNTRAINED_MODEL:
 else:
     nn_model = ai.load_model()
 
-if __name__ == "__main__":
+if pretty_board:
     class ChessWindow(QMainWindow):
         def __init__(self):
             super().__init__()
@@ -67,6 +75,29 @@ def addState(b, mp):
 def displayBoard(b, turn, flip=False):
     if __name__ == "__main__":
         print("")
+        if not pretty_board:
+            if flip:
+                for i in range(len(b)-1, -1, -1):
+                    s = "  " + str(int(8-i)) + " "
+                    for j in range(len(b[i])-1, -1, -1):
+                        s += piece_icons[b[i][j]]
+                    print(s)
+                print("     h  g  f  e  d  c  b  a")
+            else:
+                for i in range(len(b)):
+                    s = "  " + str(int(8-i)) + " "
+                    for j in range(len(b[i])):
+                        s += piece_icons[b[i][j]]
+                    print(s)
+                print("     a  b  c  d  e  f  g  h")
+            res = gameRes(saved_states, board, movedPieces, turn)
+            check = inCheck(board, movedPieces, turn)
+            if check:
+                print("\033[91mCheck\033[0m")
+                if res == 1:
+                    print("\033[91m\033[1mCheckmate\033[0m")
+            if res == 2:
+                print("\033[93m\033[1mStalemate\033[0m")
         print("Move " + str(1+int(len(saved_states)/2)))
 
 
@@ -90,20 +121,21 @@ def makeMove(start, end, promotion=5, isPromotion=False):
         check = inCheck(board, movedPieces, toPlay)
         if check:
             messages.append("\033[91mCheck\033[0m")
-            king = 6
-            if toPlay == -1:
-                king = 12
-            for i in range(8):
-                for j in range(8):
-                    if board[i][j] == king:
-                        checkSquare = py_chess.square(j, 7-i)
+            if pretty_board:
+                king = 6
+                if toPlay == -1:
+                    king = 12
+                for i in range(8):
+                    for j in range(8):
+                        if board[i][j] == king:
+                            checkSquare = py_chess.square(j, 7-i)
             if res == 1:
                 messages.append("\033[91m\033[1mCheckmate\033[0m")
                 playing = False
         if res == 2:
             messages.append("\033[93m\033[1mStalemate\033[0m")
             playing = False
-        if __name__ == "__main__":
+        if pretty_board:
             window.move([start, end, promotion], isPromotion, toPlay==-1 and FLIP_BOARD, checkSquare)
         addState(board, movedPieces)
         print("Made move", start, end)
@@ -117,10 +149,14 @@ def makeMove(start, end, promotion=5, isPromotion=False):
         print("Invalid move")
     if DEBUG:
         input("Press enter")
-    threading.Thread(target=getNextMove).start()
+    if pretty_board:
+        threading.Thread(target=getNextMove).start()
+    else:
+        getNextMove()
 
 
 def inputMove(source):
+    displayBoard(board, toPlay, toPlay == -1 and FLIP_BOARD)
     print({1: "White", -1: "Black"}[toPlay] + " to play")
     isPromotion = False
     if source == 0:
@@ -128,20 +164,28 @@ def inputMove(source):
         promotion = 5
         while not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
             inputStr = input("Move: ")
+            enterCommand = (len(inputStr) > 0 and inputStr[0] == '/')
             try:
                 myMove = ai.pgn_to_move(inputStr, board, movedPieces, toPlay)
                 promotion = myMove[2]
                 myMove = [myMove[0], myMove[1]]
             except:
-                myMove = []
-                print("Error understanding move")
+                if inputStr == "quit":
+                    if pretty_board:
+                        window.close()
+                    sys.exit()
+                elif not enterCommand:
+                    myMove = []
             if not len(myMove) == 2 or not validMove(board, movedPieces, myMove[0], myMove[1], toPlay):
-                print("Invalid move")
-                if len(inputStr) > 0 and inputStr[0] == '/':
+                if enterCommand:
+                    sys.stdout.write("\x1b[1A")
+                    sys.stdout.write('\x1b[2K')
                     try:
                         print(eval(input("Command: ")))
                     except Exception as e:
                         print(str(e))
+                else:
+                    print("Invalid move")
         if (board[myMove[0][0]][myMove[0][1]] == 1 and myMove[1][0] == 0) or (board[myMove[0][0]][myMove[0][1]] == 7 and myMove[1][0] == 7):
             isPromotion = True
             if inputStr.find("=") == -1:
@@ -200,11 +244,9 @@ def getNextMove():
     global playing
     global toPlay
 
-    print("Playing", toPlay)
-
     if playing:
+        cpp_showBitMoves(cppState(board, movedPieces), toPlay)
         inputMove(players[toPlay])
-        displayBoard(board, toPlay, {1: False, -1: True and FLIP_BOARD}[toPlay])
         for i in range(len(messages)):
             print(messages[i])
         messages = []
@@ -213,10 +255,18 @@ def getNextMove():
 
 if __name__ == "__main__":
     os.system('clear')
-    displayBoard(board, toPlay)
-    app = QApplication([])
-    window = ChessWindow()
-    threading.Thread(target=getNextMove).start()
-    QtCore.QCoreApplication.processEvents()
-    window.show()
-    sys.exit(app.exec())
+    
+    print("--- \033[1mBrickChess0.5\033[0m ---")
+    print("Enter moves in PGN notation (e.g. Nc3, dxe4, O-O-O)")
+    print("Type \"quit\" to exit")
+    print("Slash / to enter Python shell simulator\n")
+
+    if pretty_board:
+        app = QApplication([])
+        window = ChessWindow()
+        threading.Thread(target=getNextMove).start()
+        QtCore.QCoreApplication.processEvents()
+        window.show()
+        sys.exit(app.exec())
+    else:
+        getNextMove()

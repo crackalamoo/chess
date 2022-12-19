@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <ctime>
 #include <cmath>
+#include "bitboard.h"
 using namespace std;
 
 #ifndef nullptr
@@ -19,63 +20,6 @@ const int SIMPLIFIED_PIECE_VAL[] = {0, 100, 300, 300, 500, 900, 20000, -100, -30
 const int PIECE_SIDE[] = { 0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1 };
 const int FILE_SEARCH[] = {3, 4, 2, 5, 1, 6, 0, 7};
 const int RANK_SEARCH[] = {3, 4, 1, 6, 0, 7, 2, 5};
-
-const int PAWN_MAP[8][8] = {{90, 90, 90, 90, 90, 90, 90, 90},
-                            {60, 50, 50, 50, 50, 50, 50, 60},
-                            {10, 10, 20, 30, 30, 20, 10, 10},
-                            {5,  5, 10, 25, 25, 10,  5,  5},
-                            {0,  0,  0, 25, 25,  0,  0,  0},
-                            {5, -5,-10,  0,  0,-10, -5,  5},
-                            {10, 5, 10,-20,-20, 10,  5, 10},
-                            {0,  0,  0,  0,  0,  0,  0,  0}};
-const int KNIGHT_MAP[8][8]={{-50,-40,-30,-30,-30,-30,-40,-50},
-                            {-40,-20,  0,  0,  0,  0,-20,-40},
-                            {-30,  0, 10, 15, 15, 10,  0,-30},
-                            {-30,  5, 15, 20, 20, 15,  5,-30},
-                            {-30,  0, 15, 20, 20, 15,  0,-30},
-                            {-30,  5, 10, 15, 15, 10,  5,-30},
-                            {-40,-20,  5,  5,  5,  5,-20,-40},
-                            {-50,-40,-30,-30,-30,-30,-40,-50}};
-const int BISHOP_MAP[8][8]={{-20,-10,-10,-10,-10,-10,-10,-20},
-                            {-10,  0,  0,  0,  0,  0,  0,-10},
-                            {-10, -5,  5, 10, 10,  5, -5,-10},
-                            {-10,  5, 25, 20, 20, 25,  5,-10},
-                            {-10,  0, 25, 25, 25, 25,  0,-10},
-                            {-10, 10, 10, 15, 15, 10, 10,-10},
-                            {-10, 10,  0,  5,  5,  0, 10,-10},
-                            {-20,-10,-20,-10,-10,-20,-10,-20}};
-const int ROOK_MAP[8][8] = {{ 0,  0,  0,  0,  0,  0,  0,  0},
-                            { 5, 10, 10, 10, 10, 10, 10,  5},
-                            {-5,  0,  0,  0,  0,  0,  0, -5},
-                            {-5,  0,  0,  0,  0,  0,  0, -5},
-                            {-5,  0,  0,  0,  0,  0,  0, -5},
-                            {-5,  0,  0,  0,  0,  0,  0, -5},
-                            {-5,  0,  0,  0,  0,  0,  0, -5},
-                            { 0,  0,  0,  5,  5,  0,  0,  0}};
-const int QUEEN_MAP[8][8] ={{-20,-10,-10, -5, -5,-10,-10,-20},
-                            {-10,  0,  0,  0,  0,  0,  0,-10},
-                            {-10,  0,  5,  5,  5,  5,  0,-10},
-                            { -5,  0,  5,  5,  5,  5,  0, -5},
-                            {  0,  0,  5,  5,  5,  5,  0, -5},
-                            {-10,  5,  5,  5,  5,  5,  0,-10},
-                            {-10,  0,  5,  0,  0,  0,  0,-10},
-                            {-20,-10,-10, -5, -5,-10,-10,-20}};
-const int KING_MAP[8][8] = {{-30,-40,-40,-50,-50,-40,-40,-30},
-                            {-30,-40,-40,-50,-50,-40,-40,-30},
-                            {-30,-40,-40,-50,-50,-40,-40,-30},
-                            {-30,-40,-40,-50,-50,-40,-40,-30},
-                            {-20,-30,-30,-40,-40,-30,-30,-20},
-                            {-10,-20,-20,-20,-20,-20,-20,-10},
-                            {  0,  0,-15,-15,-15,-15,  0,  0},
-                            { 25, 35, 40,  5,  5, 15, 45, 25}};
-const int KING_MAP_ENDGAME[8][8] = {{-50,-40,-30,-20,-20,-30,-40,-50},
-                                    {-30,-20,-10,  0,  0,-10,-20,-30},
-                                    {-30,-10, 20, 30, 30, 20,-10,-30},
-                                    {-30,-10, 30, 40, 40, 30,-10,-30},
-                                    {-30,-10, 30, 40, 40, 30,-10,-30},
-                                    {-30,-10, 20, 30, 30, 20,-10,-30},
-                                    {-30,-30,  0,  0,  0,  0,-30,-30},
-                                    {-50,-30,-30,-30,-30,-30,-30,-50}};
 
 typedef int square[2];
 
@@ -779,6 +723,88 @@ int alphaBeta(GameState states[], int statesSize, GameState state, int depth, in
 
 }
 
+// bitboard reimplementation
+
+BitState gamestate_to_bitstate(GameState state, int turn) {
+    BitState bitstate;
+    bitstate.white = 0;
+    bitstate.black = 0;
+    bitstate.pawns = 0;
+    bitstate.knights = 0;
+    bitstate.bishops = 0;
+    bitstate.rooks = 0;
+    bitstate.queens = 0;
+    bitstate.kings = 0;
+    bitstate.moved = 0;
+    bitstate.en_passant = 64;
+    bitstate.extra_info = 0;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (state.board[i][j] != 0) {
+                int piece = state.board[i][j];
+                uint64_t bit = 1;
+                bit = bit << (i*8+j);
+                if (PIECE_SIDE[piece] == 1) {
+                    bitstate.white |= bit;
+                } else {
+                    bitstate.black |= bit;
+                }
+                if (piece == 1 || piece == 7) {
+                    bitstate.pawns |= bit;
+                } else if (piece == 2 || piece == 8) {
+                    bitstate.knights |= bit;
+                } else if (piece == 3 || piece == 9) {
+                    bitstate.bishops |= bit;
+                } else if (piece == 4 || piece == 10) {
+                    bitstate.rooks |= bit;
+                } else if (piece == 5 || piece == 11) {
+                    bitstate.queens |= bit;
+                } else if (piece == 6 || piece == 12) {
+                    bitstate.kings |= bit;
+
+                    // check castling rights
+                    if (!state.moved[i][j]) {
+                        int castle = 4;
+                        uint8_t kingside = 2;
+                        uint8_t queenside = 4;
+                        if (piece == 12) {
+                            castle = 10;
+                            kingside = 8;
+                            queenside = 16;
+                        }
+                        // kingside castle
+                        if (state.board[i][j+3] == castle && !state.moved[i][j+3]) {
+                            bitstate.extra_info |= kingside;
+                        }
+                        // queenside castle
+                        if (state.board[i][j-4] == castle && !state.moved[i][j-4]) {
+                            bitstate.extra_info |= queenside;
+                        }
+                    }
+                }
+                if (state.moved[i][j]) {
+                    bitstate.moved |= bit;
+                }
+            }
+        }
+    }
+    square lastmv = {state.lastMoved[0], state.lastMoved[1]};
+    if ((state.board[lastmv[0]][lastmv[1]] == 1 && lastmv[0] == 4)
+    || (state.board[lastmv[0]][lastmv[1]] == 7 && lastmv[0] == 3)) {
+        bitstate.en_passant = lastmv[0]*8+lastmv[1];
+    }
+    if (turn == -1) {
+        cout << "converting as black" << endl;
+        bitstate.extra_info |= 1;
+    }
+    cout << numSquare(bitstate.en_passant) << endl;
+    return bitstate;
+}
+
+
+
+// exported functions
+
 extern "C" void set_calc_time(int c) {
     calc_time = c;
 }
@@ -789,6 +815,16 @@ extern "C" int showMoves(GameState state, int turn) {
         cout << "(" << moves.at(i).at(0) << moves.at(i).at(1) << ") -> (" << moves.at(i).at(2) << moves.at(i).at(3) << ")" << endl;
     }
     return 0;
+}
+
+extern "C" void showBitMoves(GameState state, int turn) {
+    BitState bboard = gamestate_to_bitstate(state, turn);
+    vector<BitMove> moves = bitLegal(bboard);
+    for (int i = 0; i < moves.size(); i++) {
+        uint8_t start = moves.at(i).start;
+        uint8_t end = moves.at(i).end;
+        cout << "(" << numSquare((int)(start)) << ") -> (" << numSquare((int)(end)) << ")" << endl;
+    }
 }
 
 extern "C" int minimax(GameState states[], int statesSize, GameState s, int turn, int depth, bool moreEndgameDepth=true) {

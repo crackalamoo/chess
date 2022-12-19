@@ -90,6 +90,8 @@ cpp_minimax = chessFuncs.minimax
 cpp_minimax.restype = ctypes.c_int
 cpp_showMoves = chessFuncs.showMoves
 cpp_showMoves.restype = ctypes.c_int
+cpp_showBitMoves = chessFuncs.showBitMoves
+cpp_showBitMoves.restype = ctypes.c_int
 cpp_gameRes = chessFuncs.gameRes
 cpp_gameRes.restype = ctypes.c_int
 cpp_setCalc = chessFuncs.set_calc_time
@@ -118,9 +120,12 @@ def minimax(states, b, mp, turn, depth, time, moreEndgameDepth):
     res = cpp_minimax(states, ctypes.c_int(len(states)), state, ctypes.c_int(turn),
     ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
     return ((int((res%10000)/1000),int((res%1000)/100)), (int((res%100)/10), int(res%10)), int(res/10000))
-def showMoves(b, mp, turn):
+def showMoves(b, mp, turn, bit=True):
     state = cppState(b, mp)
-    cpp_showMoves(state, ctypes.c_int(turn))
+    if bit:
+        cpp_showBitMoves(state, ctypes.c_int(turn))
+    else:
+        cpp_showMoves(state, ctypes.c_int(turn))
 def evalState(b, mp):
     state = cppState(b, mp)
     return cpp_evalState(state)
