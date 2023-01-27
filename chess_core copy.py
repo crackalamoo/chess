@@ -17,18 +17,18 @@ PIECE_SIDE = [0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1]
 
 
 class GameState(ctypes.Structure):
-    _fields_ = [("board", (ctypes.c_short*8)*8), ("moved", (ctypes.c_bool*8)*8), ("lastMoved", ctypes.c_short*2)]
+    _fields_ = [("board", (ctypes.c_int*8)*8), ("moved", (ctypes.c_bool*8)*8), ("lastMoved", ctypes.c_int*2)]
 
 def cppBoard(b):
     input_board = []
-    cpp_row = ctypes.c_short*8
+    cpp_row = ctypes.c_int*8
     cpp_board = cpp_row*8
     for i in range(8):
         input_board.append(cpp_row(*b[i]))
     input_board = cpp_board(*input_board)
     return input_board
 def cppSquare(s):
-    cpp_square = ctypes.c_short*2
+    cpp_square = ctypes.c_int*2
     return cpp_square(*s)
 def cppMoved(mp):
     mp_board = []
@@ -117,9 +117,8 @@ def minimax(states, b, mp, turn, depth, time, moreEndgameDepth):
     cpp_setCalc(time)
     state = cppState(b, mp)
     states = cppStates(states)
-    #res = cpp_minimax(states, ctypes.c_int(len(states)), state, ctypes.c_int(turn),
-    #ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
-    res = cpp_minimax(state, ctypes.c_int(turn), ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
+    res = cpp_minimax(states, ctypes.c_int(len(states)), state, ctypes.c_int(turn),
+    ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
     return ((int((res%10000)/1000),int((res%1000)/100)), (int((res%100)/10), int(res%10)), int(res/10000))
 def showMoves(b, mp, turn, bit=True):
     state = cppState(b, mp)

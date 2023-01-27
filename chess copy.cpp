@@ -21,10 +21,10 @@ const int PIECE_SIDE[] = { 0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1 };
 const int FILE_SEARCH[] = {3, 4, 2, 5, 1, 6, 0, 7};
 const int RANK_SEARCH[] = {3, 4, 1, 6, 0, 7, 2, 5};
 
-typedef short square[2];
+typedef int square[2];
 
 struct GameState {
-    short board[8][8];
+    int board[8][8];
     bool moved[8][8];
     square lastMoved;
 };
@@ -134,7 +134,7 @@ GameState afterMove(GameState state, square start, square end, int promotion=5) 
     square captured = {end[0], end[1]};
     copy(&state.board[0][0], &state.board[0][0]+64, &newState.board[0][0]);
     copy(&state.moved[0][0], &state.moved[0][0]+64, &newState.moved[0][0]);
-    short piece = newState.board[start[0]][start[1]];
+    int piece = newState.board[start[0]][start[1]];
     if (piece == 1 && end[1]-start[1] != 0 && newState.board[end[0]][end[1]] == 0) // white en passant
         captured[0] = end[0]+1;
     if (piece == 7 && end[1]-start[1] != 0 && newState.board[end[0]][end[1]] == 0) // black en passant
@@ -174,7 +174,7 @@ bool inCheck(GameState state, int turn) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             if (PIECE_SIDE[state.board[i][j]] == turn*-1) {
-                short piece = state.board[i][j];
+                int piece = state.board[i][j];
                 vector< vector<int> > directions;
                 int steps = 1;
                 square startPos = {i,j};
@@ -239,7 +239,7 @@ bool unbrokenLine(GameState state, square start, square end, int dx, int dy) {
 bool validMove(GameState state, square start, square end, int turn, bool useCheck=true) {
     if (end[0] < 0 || end[0] >= 8 || end[1] < 0 || end[1] >= 8) // trying to move off the board
         return false;
-    short piece = state.board[start[0]][start[1]];
+    int piece = state.board[start[0]][start[1]];
     square moveTo = {end[0], end[1]};
     if (PIECE_SIDE[piece] != turn) // trying to move opponent piece
         return false;
@@ -353,7 +353,7 @@ vector<vector<int> > validMoves(GameState state, int turn) {
             int j = FILE_SEARCH[j0];
             square start = {i,j};
             if (PIECE_SIDE[state.board[i][j]] == turn) {
-                short piece = state.board[i][j];
+                int piece = state.board[i][j];
                 switch(piece) {
                     case 1:
                         for (int k = 0; k < 4; k++) {
@@ -469,7 +469,7 @@ extern "C" int evaluateState(GameState state) {
     bool isEndgame = endgameState(state);
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
-            short piece = state.board[i][j];
+            int piece = state.board[i][j];
             val += PIECE_VAL[piece];
             if (state.moved[i][j]) {
                 if (piece == 2 || piece == 3)
@@ -659,9 +659,8 @@ struct MoveRoot {
         int material;
 };
 
-int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
-    GameState states[] = {};
-    int res = gameRes(states, 0, state, turn);
+int alphaBeta(GameState states[], int statesSize, GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
+    int res = gameRes(states, statesSize, state, turn);
     if (depth == 0 && res == 0) {
         return turn*evaluateState(state);
     }
@@ -673,33 +672,39 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
     }
     vector<vector<int> > moves = validMoves(state, turn);
     int value = -100000;
-    int bottomDepth = 0;
+    int bottomDepth = -1;
+    if (timeLimit <= 5000)
+        bottomDepth = 0;
     for (int i = 0; i < moves.size(); i++) {
         GameState newState = afterVecMove(state, moves.at(i));
         int nextDepth = depth-1;
         int timeElapsed = get_millis()-start_calc;
         int extraPoints = 0;
-        //bool threefold = (num_reps_extra(states, statesSize, newState, state) >= 3);
-        //bool threefold = false;
+        bool threefold = (num_reps_extra(states, statesSize, newState, state) >= 3);
         if (trueDepth >= bottomDepth) {
             int capturePiece = state.board[moves.at(i).at(2)][moves.at(i).at(3)];
             int curr_material = turn*evaluateMaterial(newState);
             bool capture = (PIECE_SIDE[capturePiece] == turn*-1);
             if (capture)
                 extraPoints += 10*(curr_material >= 0);
-            /* bool check = false;
-            if (trueDepth > 0) {
+            bool check = false;
+            if (trueDepth >= 0) {
                 check = inCheck(newState, turn*-1);
                 if (check)
                     extraPoints += 20;
-            } */
-            if (capture && (timeElapsed < timeLimit*0.25 || (curr_material >= turn*root->material && timeElapsed < timeLimit*0.5))) {
+            }
+            if ((capture || check) && (curr_material >= turn*root->material || timeElapsed < timeLimit*0.25
+            || (trueDepth > bottomDepth && timeElapsed < timeLimit*0.5))) {
                 nextDepth = 1;
             }
         }
         int curr_val;
-        curr_val = -alphaBeta(newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit);
-        curr_val += extraPoints;
+        if (threefold) {
+            curr_val = 0;
+        } else {
+            curr_val = -alphaBeta(states, statesSize, newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit);
+            curr_val += extraPoints;
+        }
         if (curr_val > value) {
             value = curr_val;
             if (trueDepth == root->depth) {
@@ -744,7 +749,7 @@ BitState gamestate_to_bitstate(GameState state, int turn) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             if (state.board[i][j] != 0) {
-                short piece = state.board[i][j];
+                int piece = state.board[i][j];
                 uint64_t bit = 1;
                 bit = bit << (i*8+j);
                 if (PIECE_SIDE[piece] == 1) {
@@ -831,7 +836,7 @@ extern "C" void showBitMoves(GameState state, int turn) {
     cout << "info: " << bboard.extra_info << endl;
 }
 
-extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=true) {
+extern "C" int minimax(GameState states[], int statesSize, GameState s, int turn, int depth, bool moreEndgameDepth=true) {
     srand(time(0));
     square noSquare = {-1,-1};
     MoveRoot* root = new MoveRoot();
@@ -843,7 +848,9 @@ extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=t
     root->material = evaluateMaterial(s);
     int score0 = evaluateState(s);
     start_calc = get_millis();
-    alphaBeta(s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
+    cout << "a" << endl;
+    alphaBeta(states, statesSize, s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
+    cout << "b" << endl;
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
     delete root;
     return res;

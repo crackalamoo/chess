@@ -245,7 +245,7 @@ def getNextMove():
     global toPlay
 
     if playing:
-        cpp_showBitMoves(cppState(board, movedPieces), toPlay)
+        #cpp_showBitMoves(cppState(board, movedPieces), toPlay)
         inputMove(players[toPlay])
         for i in range(len(messages)):
             print(messages[i])

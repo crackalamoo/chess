@@ -223,7 +223,6 @@ string bitSquare(uint64_t sqr) {
 
 void scanRay(vector<BitMove> * moves, uint64_t start, int bitShift, uint64_t canmove, uint64_t enemy,
 uint8_t extrainfo, uint64_t edge, bool isRook=false) {
-    //cout << "scanning ray " << bitSquare(start) << endl;
     if (start & edge)
         return;
     uint64_t ray = start;
