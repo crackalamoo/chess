@@ -11,7 +11,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 T_PLY = 1 # number of ply to analyze
  
-def minimax_ai(b, mp, states, turn, time=8000):
+def minimax_ai(b, mp, states, turn, time=20000):
     return chess.minimax(states, b, mp, turn, 2, time, True)
 
 def nn_ai(model, b, mp, states, turn, time=5.0):

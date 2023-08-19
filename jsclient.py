@@ -52,7 +52,6 @@ def js_minimax():
         time = min(time, 4500)
     if 20 <= len(states) <= 46:
         time = int(time*2)
-    time = min(time, 7500)
     res = ai.minimax_ai(b, mp, states, turn, time)
     res = jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
     return res

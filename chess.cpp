@@ -474,12 +474,14 @@ extern "C" int evaluateState(GameState state) {
             if (state.moved[i][j]) {
                 if (piece == 2 || piece == 3)
                     val += 35;
-                if (piece == 8 || piece == 9)
+                else if (piece == 8 || piece == 9)
                     val -= 35;
-                if (piece == 5 || piece == 6)
-                    val -= 20;
-                if (piece == 11 || piece == 12)
-                    val += 20;
+                if (!isEndgame) {
+                    if (piece == 5 || piece == 6)
+                        val -= 25;
+                    else if (piece == 11 || piece == 12)
+                        val += 25;
+                }
             }
             switch(piece) {
                 case 0: break;
@@ -519,9 +521,9 @@ extern "C" int evaluateState(GameState state) {
         }
     }
     if (state.board[6][3] == 1 && state.board[6][4] == 1)
-        val -= 35;
+        val -= 305;
     if (state.board[1][3] == 7 && state.board[1][4] == 7)
-        val += 35;
+        val += 305;
     if (whiteBishops >= 2)
         val += 35;
     if (blackBishops >= 2)
@@ -558,7 +560,7 @@ extern "C" int evaluateState(GameState state) {
         }
         val -= 35*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
-    if (val < -450) {
+    else if (val < -450) {
         if (isEndgame)
             val += KING_MAP_ENDGAME[blackKingSquare[0]][blackKingSquare[1]];
         else
@@ -713,7 +715,8 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
             }
         }
         alpha = max(alpha, value);
-        if (alpha >= beta || timeElapsed >= timeLimit) {
+        // if (alpha >= beta || timeElapsed >= timeLimit) {
+        if (alpha >= beta) {
             if (trueDepth == root->depth && timeElapsed >= timeLimit)
                 cout << "Out of time" << endl;
             break;
