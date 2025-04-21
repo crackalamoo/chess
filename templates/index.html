@@ -17,20 +17,26 @@
 #boardHolder {
     text-align: center;
 }
+#chess-game {
+    padding-block: 30px;
+    padding-inline: 5%;
+}
 </style>
 <base href="http://harysdalvi.com/sub/chess/">
 </head>
 <body>
+<main>
+<section id="chess-game">
+<header class="page-intro">
 <h1 class="title">BrickChess0.5 Lite</h1>
-<h3 class="author">
-    <a href="http://harysdalvi.com">Harys Dalvi</a>
-</h3>
-<h3 class="date">August 2021</h3>
+<p class="author"><a href="http://harysdalvi.com">Harys Dalvi</a></p>
+<p class="date">August 2021</p>
 <br>
 <p>An online chess engine. <b>Note this is a lite version with limited functionality.
     You can find the full version on GitHub at
     <a href="https://github.com/crackalamoo/chess" target="_blank">crackalamoo/chess</a>.
 </b></p>
+</header>
 
 <form name="settings" action="javascript:void(0)">
 <b>White:</b> <select name="white">
@@ -67,8 +73,10 @@
 
 <div id="boardHolder">
 <canvas id="board"></canvas>
-</div><br><br><br>
+</div></section>
+<br><br><br>
 
+<article class="main">
 <p>This is by far the most intensive project I have ever done. First, some quick general notes.
 This is BrickChess0.5 Lite, an online chess engine. The full version is on
 <a href="https://github.com/crackalamoo/chess" target="_blank">GitHub</a>. The Brick is because
@@ -225,9 +233,9 @@ does make its own moves, but does not learn from zero, so it is 0.5. </p>
     of this post. If you would like to play a full game with my engine, download BrickChess0.5 from GitHub.
 </p>
 <h2 id="ref">References</h2>
-The GitHub repository for this project, including the full BrickChess0.5 rather than the Lite version,
-is at <a href="https://github.com/crackalamoo/chess" target="_blank">crackalamoo/chess</a>.
-<ol>
+<p>The GitHub repository for this project, including the full BrickChess0.5 rather than the Lite version,
+is at <a href="https://github.com/crackalamoo/chess" target="_blank">crackalamoo/chess</a>.</p>
+<ol id="reflist">
 <li><a href="https://www.chessprogramming.org/Simplified_Evaluation_Function" target="_blank">Simplified Evaluation Function</a>
     (Chess Programming Wiki) <a href="#src1">^</a></li>
 <li><a href="https://arxiv.org/pdf/1712.01815.pdf" target="_blank">Mastering Chess and Shogi by Self-Play with a General
@@ -239,8 +247,10 @@ is at <a href="https://github.com/crackalamoo/chess" target="_blank">crackalamoo
 <ul>
 <li><a href="https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces" target="_blank">SVG chess pieces</a> (Wikimedia Commons, Cburnett, CC BY-SA 3.0 license)
 </ul>
+</article>
+</main>
 
-<div id="footer"></div>
+<footer id="footer"></footer>
 <script src="static/main.js"></script>
 <script src="http://harysdalvi.com/services.js"></script>
 <script>
