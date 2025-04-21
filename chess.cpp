@@ -254,9 +254,12 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
         } else if (end[0] == start[0]-1 && (end[1] == start[1]+1 || end[1] == start[1]-1)) { // capturing diagonally
             square ep = {end[0]+1, end[1]};
             if (state.board[end[0]][end[1]] == 0) {
+                // en passant
                 if (state.board[end[0]+1][end[1]] == 7 && end[0] == 2 && state.board[1][end[1]] == 0 && sameSquare(state.lastMoved, ep))
                     return true;
                 return false;
+            } else {
+                return true;
             }
         } else if (end[0] == start[0]-2 && end[1] == start[1]) { // # moving forward two
             if (state.moved[start[0]][start[1]] || state.board[start[0]-1][start[1]] != 0 || state.board[start[0]-2][start[1]] != 0)
@@ -271,9 +274,12 @@ bool validMove(GameState state, square start, square end, int turn, bool useChec
         } else if (end[0] == start[0]+1 && (end[1] == start[1]+1 || end[1] == start[1]-1)) { // capturing diagonally
             square ep = {end[0]-1, end[1]};
             if (state.board[end[0]][end[1]] == 0) {
+                // en passant
                 if (state.board[end[0]-1][end[1]] == 1 && end[0] == 5 && state.board[6][end[1]] == 0 && sameSquare(state.lastMoved, ep))
                     return true;
                 return false;
+            } else {
+                return true;
             }
         } else if (end[0] == start[0]+2 && end[1] == start[1]) { // # moving forward two
             if (state.moved[start[0]][start[1]] || state.board[start[0]+1][start[1]] != 0 || state.board[start[0]+2][start[1]] != 0)
@@ -477,10 +483,10 @@ extern "C" int evaluateState(GameState state) {
                 else if (piece == 8 || piece == 9)
                     val -= 35;
                 if (!isEndgame) {
-                    if (piece == 5 || piece == 6)
-                        val -= 25;
-                    else if (piece == 11 || piece == 12)
-                        val += 25;
+                    if (piece == 5)
+                        val -= 35;
+                    else if (piece == 11)
+                        val += 35;
                 }
             }
             switch(piece) {
@@ -573,7 +579,7 @@ extern "C" int evaluateState(GameState state) {
         }
         val += 35*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
-    val += (rand()%10)-5;
+    // val += (rand()%10)-5;
     return val;
 }
 
@@ -659,9 +665,42 @@ struct MoveRoot {
         int depth;
         int trueDepth;
         int material;
+        unordered_map<string, int> tp_table;
 };
 
+string stateToString(GameState state) {
+    string s = "";
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            switch(state.board[i][j]) {
+                case 0: s += ".";
+                case 1: s += "p";
+                case 2: s += "n";
+                case 3: s += "b";
+                case 4: s += "r";
+                case 5: s += "q";
+                case 6: s += "k";
+                case 7: s += "P";
+                case 8: s += "N";
+                case 9: s += "B";
+                case 10: s += "R";
+                case 11: s += "Q";
+                case 12: s += "K";
+            }
+            if (state.moved[i][j]) {
+                s += "m";
+            } else {
+                s += "_";
+            }
+        }
+    }
+    return s;
+}
+
 int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
+    if (root->tp_table.find(stateToString(state)) != root->tp_table.end()) {
+        return root->tp_table[stateToString(state)];
+    }
     GameState states[] = {};
     int res = gameRes(states, 0, state, turn);
     if (depth == 0 && res == 0) {
@@ -675,7 +714,7 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
     }
     vector<vector<int> > moves = validMoves(state, turn);
     int value = -100000;
-    int bottomDepth = 0;
+    int bottomDepth = -8;
     for (int i = 0; i < moves.size(); i++) {
         GameState newState = afterVecMove(state, moves.at(i));
         int nextDepth = depth-1;
@@ -684,19 +723,20 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
         //bool threefold = (num_reps_extra(states, statesSize, newState, state) >= 3);
         //bool threefold = false;
         if (trueDepth >= bottomDepth) {
+            int movingPiece = state.board[moves.at(i).at(0)][moves.at(i).at(1)] - (6*(turn==-1));
             int capturePiece = state.board[moves.at(i).at(2)][moves.at(i).at(3)];
             int curr_material = turn*evaluateMaterial(newState);
             bool capture = (PIECE_SIDE[capturePiece] == turn*-1);
-            if (capture)
-                extraPoints += 10*(curr_material >= 0);
+            if (capture && trueDepth == root->depth)
+                extraPoints += (curr_material > 0)*(12 - movingPiece*2);
             /* bool check = false;
             if (trueDepth > 0) {
                 check = inCheck(newState, turn*-1);
                 if (check)
                     extraPoints += 20;
             } */
-            if (capture && (timeElapsed < timeLimit*0.25 || (curr_material >= turn*root->material && timeElapsed < timeLimit*0.5))) {
-                nextDepth = 1;
+            if (capture && timeElapsed < timeLimit) {
+                nextDepth = max(nextDepth, 1);
             }
         }
         int curr_val;
@@ -725,6 +765,7 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
     root->trueDepth = min(root->trueDepth, trueDepth);
     if (trueDepth == root->depth)
         cout << "Anticipated value: " << value << endl;
+    root->tp_table[stateToString(state)] = value;
     return value;
 
 }
@@ -844,6 +885,8 @@ extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=t
     root->depth = searchDepth;
     root->trueDepth = searchDepth;
     root->material = evaluateMaterial(s);
+    root->tp_table = unordered_map<string, int>();
+    cout << "current evaluation: " << evaluateState(s) << endl;
     int score0 = evaluateState(s);
     start_calc = get_millis();
     alphaBeta(s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
