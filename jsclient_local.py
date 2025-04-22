@@ -1,7 +1,7 @@
 from flask import Flask
 from chess_core import *
 import ai
- 
+
 app = Flask(__name__)
  
 from flask import jsonify, request, render_template
@@ -48,10 +48,10 @@ def js_minimax():
     time = int(request.args.get('time'))
     time = int(time/max(15.0, 20.0-len(states)/2.0))
     time = int(time*2)
-    if len(states) <= 6:
-        time = min(time, 6000)
     if len(states) <= 4:
         time = min(time, 4500)
+    elif len(states) <= 6:
+        time = min(time, 6000)
     if 6 < len(states) < 20:
         time = int(time*1.5)
     elif 20 <= len(states) <= 46:
@@ -162,4 +162,4 @@ def js_makeMove():
 
 # main driver function
 if __name__ == '__main__':
-    app.run(debug=True, host='localhost', port='8000')
+    app.run(debug=True, host='localhost', port='3000')

@@ -468,10 +468,10 @@ int myAbs(int n) {
 
 extern "C" int evaluateState(GameState state) {
     int val = 0;
-    square whiteKingSquare;
-    square blackKingSquare;
-    int whiteBishops;
-    int blackBishops;
+    square whiteKingSquare = {0,0};
+    square blackKingSquare = {0,0};
+    int whiteBishops = 0;
+    int blackBishops = 0;
     bool isEndgame = endgameState(state);
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
@@ -548,7 +548,7 @@ extern "C" int evaluateState(GameState state) {
                 case 5:
                     val += 0.5*(16-myAbs(blackKingSquare[0]-i) - myAbs(blackKingSquare[1]-j)); break;
                 case 11:
-                    val -= 0.5*(16-myAbs(blackKingSquare[0]-i) - myAbs(blackKingSquare[1]-j)); break;
+                    val -= 0.5*(16-myAbs(whiteKingSquare[0]-i) - myAbs(whiteKingSquare[1]-j)); break;
                 default: break;
             }
         }
@@ -668,7 +668,8 @@ struct MoveRoot {
         unordered_map<string, int> tp_table;
 };
 
-string stateToString(GameState state) {
+string stateToString(GameState state, int turn=0) {
+    // turn 0 means don't care about turn
     string s = "";
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
@@ -694,12 +695,17 @@ string stateToString(GameState state) {
             }
         }
     }
+    if (turn == 1) {
+        s += "w";
+    } else if (turn == -1) {
+        s += "b";
+    }
     return s;
 }
 
 int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
-    if (root->tp_table.find(stateToString(state)) != root->tp_table.end()) {
-        return root->tp_table[stateToString(state)];
+    if (root->tp_table.find(stateToString(state, turn)) != root->tp_table.end()) {
+        return root->tp_table[stateToString(state, turn)];
     }
     GameState states[] = {};
     int res = gameRes(states, 0, state, turn);
@@ -765,7 +771,7 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
     root->trueDepth = min(root->trueDepth, trueDepth);
     if (trueDepth == root->depth)
         cout << "Anticipated value: " << value << endl;
-    root->tp_table[stateToString(state)] = value;
+    root->tp_table[stateToString(state, turn)] = value;
     return value;
 
 }

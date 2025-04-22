@@ -117,8 +117,8 @@ def minimax(states, b, mp, turn, depth, time, moreEndgameDepth):
     cpp_setCalc(time)
     state = cppState(b, mp)
     states = cppStates(states)
-    #res = cpp_minimax(states, ctypes.c_int(len(states)), state, ctypes.c_int(turn),
-    #ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
+    # res = cpp_minimax(states, ctypes.c_int(len(states)), state, ctypes.c_int(turn),
+    # ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
     res = cpp_minimax(state, ctypes.c_int(turn), ctypes.c_int(depth), ctypes.c_bool(moreEndgameDepth))
     return ((int((res%10000)/1000),int((res%1000)/100)), (int((res%100)/10), int(res%10)), int(res/10000))
 def showMoves(b, mp, turn, bit=True):

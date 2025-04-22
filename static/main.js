@@ -350,9 +350,9 @@ function touchBoard(event) {
 }
 
 if (location.hostname == "localhost") {
-    var SERVER_URL = 'http://localhost:8000/';
+    var SERVER_URL = 'http://localhost:3000/';
 } else {
-    var SERVER_URL = 'http://www.harysdalvi.com/apps/chess/';
+    var SERVER_URL = 'https://www.harysdalvi.com/apps/chess/';
 }
 
 async function getPython(pyfunc, args={}) {

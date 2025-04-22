@@ -1,6 +1,6 @@
 from flask import Flask
 from chess_core import *
-import ai # ai_local.py stored as ai.py online
+import ai # ai_live.py stored as ai.py online
 
 app = Flask(__name__)
 
@@ -33,9 +33,9 @@ def arg_to_states(arg):
             states.append([arg_to_board(state[0]), arg_to_moved(state[1])])
     return states
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# @app.route('/')
+# def index():
+#     return render_template('index.html')
 
 @app.route('/minimax')
 def js_minimax():
@@ -109,4 +109,4 @@ def js_makeMove():
         return jsonify({"res": -2})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port='5001')

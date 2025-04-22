@@ -22,7 +22,7 @@
     padding-inline: 5%;
 }
 </style>
-<base href="http://harysdalvi.com/sub/chess/">
+<!-- <base href="http://harysdalvi.com/sub/chess/"> -->
 </head>
 <body>
 <main>
@@ -135,10 +135,10 @@ does make its own moves, but does not learn from zero, so it is 0.5. </p>
     move since it hasn't yet seen all the available moves even on the first ply. This problem is reduced when playing longer games
     with more time available to the AI.
 </p>
-<div class="endfloat">
+<figure class="endfloat">
     <img src="static/img/checkmate.png">
-    <p class="caption">The AI winning with checkmate for black. Almost every piece is necessary for this checkmate.</p>
-</div>
+    <figcaption>The AI winning with checkmate for black. Almost every piece is necessary for this checkmate.</figcaption>
+</figure>
 <p>Another problem was that if the AI was winning, it had trouble finding the checkmate because it didn't have enough depth and was still
     trying to protect its king. Therefore, I made the AI bring its king out if the queens were off the board. I also made it bring its main
     pieces closer to the opponent king, and also made it bring the king
@@ -151,7 +151,7 @@ does make its own moves, but does not learn from zero, so it is 0.5. </p>
     This was also a challenge, because the window display took priority over calling the chess AI functions. I was able to solve
     that using <strong><code>threading</code></strong>.
 </p>
-<div class="middleimg"><img src="static/img/graphics.png"></div>
+<figure class="middleimg"><img src="static/img/graphics.png"></figure>
 <h2>Neural Network</h2>
 <p>I tried adding a neural network AI as well. My neural network was largely inspired by <strong>AlphaZero</strong> [<a href="#ref" id="src2">2</a>], with some
     of my own ideas. AlphaZero uses a form of <strong>residual neural network</strong> based on <strong>convolutional neural networks</strong>.
