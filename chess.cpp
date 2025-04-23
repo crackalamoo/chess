@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <ctime>
 #include <cmath>
+
 #include "bitboard.h"
 using namespace std;
 
@@ -484,9 +485,9 @@ extern "C" int evaluateState(GameState state) {
                     val -= 35;
                 if (!isEndgame) {
                     if (piece == 5)
-                        val -= 35;
+                        val -= 15;
                     else if (piece == 11)
-                        val += 35;
+                        val += 15;
                 }
             }
             switch(piece) {
@@ -527,9 +528,9 @@ extern "C" int evaluateState(GameState state) {
         }
     }
     if (state.board[6][3] == 1 && state.board[6][4] == 1)
-        val -= 305;
+        val -= 105;
     if (state.board[1][3] == 7 && state.board[1][4] == 7)
-        val += 305;
+        val += 105;
     if (whiteBishops >= 2)
         val += 35;
     if (blackBishops >= 2)
@@ -564,7 +565,7 @@ extern "C" int evaluateState(GameState state) {
             if (!validMove(state, blackKingSquare, choices[i], -1))
                 val += 15;
         }
-        val -= 35*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
+        val -= 15*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
     else if (val < -450) {
         if (isEndgame)
@@ -577,7 +578,7 @@ extern "C" int evaluateState(GameState state) {
             if (!validMove(state, whiteKingSquare, choices[i], 1))
                 val -= 15;
         }
-        val += 35*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
+        val += 15*(myAbs(whiteKingSquare[0]-blackKingSquare[0])+myAbs(whiteKingSquare[1]-blackKingSquare[1]));
     }
     // val += (rand()%10)-5;
     return val;
@@ -658,13 +659,20 @@ extern "C" int gameRes(GameState states[], int statesSize, GameState state, int 
     return 2; // stalemate
 }
 
+enum Bound { LOWER, UPPER, EXACT };
+struct TPTableEntry {
+    public:
+        int value;
+        int depth;
+        Bound bound;
+};
 struct MoveRoot {
     public:
         square start;
         square end;
         int depth;
         int material;
-        unordered_map<string, int> tp_table;
+        unordered_map<string, TPTableEntry> tp_table;
 };
 
 string stateToString(GameState state, int turn=0) {
@@ -673,19 +681,19 @@ string stateToString(GameState state, int turn=0) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             switch(state.board[i][j]) {
-                case 0: s += ".";
-                case 1: s += "p";
-                case 2: s += "n";
-                case 3: s += "b";
-                case 4: s += "r";
-                case 5: s += "q";
-                case 6: s += "k";
-                case 7: s += "P";
-                case 8: s += "N";
-                case 9: s += "B";
-                case 10: s += "R";
-                case 11: s += "Q";
-                case 12: s += "K";
+                case 0: s += ".";break;
+                case 1: s += "p";break;
+                case 2: s += "n";break;
+                case 3: s += "b";break;
+                case 4: s += "r";break;
+                case 5: s += "q";break;
+                case 6: s += "k";break;
+                case 7: s += "P";break;
+                case 8: s += "N";break;
+                case 9: s += "B";break;
+                case 10: s += "R";break;
+                case 11: s += "Q";break;
+                case 12: s += "K";break;
             }
             if (state.moved[i][j]) {
                 s += "m";
@@ -702,9 +710,20 @@ string stateToString(GameState state, int turn=0) {
     return s;
 }
 
-int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int alpha, int beta, int timeLimit) {
+int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int alpha, int beta, bool isRoot, int timeLimit) {
+    TPTableEntry entry;
     if (root->tp_table.find(stateToString(state, turn)) != root->tp_table.end()) {
-        return root->tp_table[stateToString(state, turn)];
+        entry = root->tp_table[stateToString(state, turn)];
+        if (entry.depth >= depth) {
+            if (entry.bound == EXACT)
+                return entry.value;
+            else if (entry.bound == LOWER && entry.value > alpha)
+                return entry.value;
+            else if (entry.bound == UPPER && entry.value < beta)
+                return entry.value;
+            else if (alpha >= beta)
+                return entry.value;
+        }
     }
     GameState states[] = {};
     int res = gameRes(states, 0, state, turn);
@@ -719,30 +738,38 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int alpha, i
     }
     vector<vector<int> > moves = validMoves(state, turn);
     int value = -100000;
+    const int alpha0 = alpha;
     for (int i = 0; i < moves.size(); i++) {
         int timeElapsed = get_millis()-start_calc;
         GameState newState = afterVecMove(state, moves.at(i));
-        int curr_val = -alphaBeta(newState, depth-1, -1*turn, root, -1*beta, -1*alpha, timeLimit);
+        int curr_val = -alphaBeta(newState, depth-1, -1*turn, root, -1*beta, -1*alpha, false, timeLimit);
         if (curr_val > value) {
             value = curr_val;
-            if (depth == root->depth) {
+            if (isRoot) {
                 root->start[0] = moves.at(i).at(0);
                 root->start[1] = moves.at(i).at(1);
                 root->end[0] = moves.at(i).at(2);
                 root->end[1] = moves.at(i).at(3);
-                // cout << "best move: d" << trueDepth << " "
-                // << moves.at(i).at(0) << moves.at(i).at(1) << "->" << moves.at(i).at(2) << moves.at(i).at(3)
-                // << " v=" << value << " v0=" << evaluateState(newState) << endl;
             }
         }
         alpha = max(alpha, value);
-        if (alpha >= beta || timeElapsed >= timeLimit) {
+        if (alpha >= beta || timeElapsed >= timeLimit)
             break;
+    }
+    // root->tp_table[stateToString(state, turn)] = value;
+    if (root->tp_table.find(stateToString(state, turn)) == root->tp_table.end()
+    || root->tp_table[stateToString(state, turn)].depth < depth) {
+        entry.value = value;
+        entry.depth = depth;
+        if (value <= alpha0) {
+            entry.bound = UPPER;
+        } else if (value >= beta) {
+            entry.bound = LOWER;
+        } else {
+            entry.bound = EXACT;
         }
     }
-    if (depth == root->depth)
-        cout << "Anticipated value: " << value << endl;
-    root->tp_table[stateToString(state, turn)] = value;
+    root->tp_table[stateToString(state, turn)] = entry;
     return value;
 }
 
@@ -753,19 +780,21 @@ void iterativeDeepening(GameState state, int turn, MoveRoot* bestRoot, int timeL
         MoveRoot* root = new MoveRoot();
         root->depth = depth;
         root->material = evaluateMaterial(state);
-        root->tp_table = unordered_map<string, int>();
+        root->tp_table = bestRoot->tp_table;
         int timeElapsed = get_millis() - start_calc;
         if (timeElapsed >= timeLimit && depth > 1) {
             // cout << "Out of time" << endl;
             break;
         }
         
-        int value = alphaBeta(state, depth, turn, root, -100000, 100000, timeLimit);
-        cout << "Depth: " << depth << " Value: " << value << " Elapsed: " << (get_millis() - start_calc) << endl;
+        int value = alphaBeta(state, depth, turn, root, -100000, 100000, true, timeLimit);
         if (get_millis() - start_calc >= timeLimit) {
             // cout << "Out of time" << endl;
             break;
         }
+        cout << "Depth: " << depth << " Value: " << value << " Elapsed: " << (get_millis() - start_calc)
+            << " Move:" << root->start[0] << "," << root->start[1] << " to " << root->end[0] << "," << root->end[1]
+            << endl;
         
         // Update best root with the current root's move
         bestRoot->start[0] = root->start[0];
@@ -896,7 +925,7 @@ extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=t
         searchDepth += 1;
     root->depth = searchDepth;
     root->material = evaluateMaterial(s);
-    root->tp_table = unordered_map<string, int>();
+    root->tp_table = unordered_map<string, TPTableEntry>();
     cout << "current evaluation: " << evaluateState(s) << endl;
     int score0 = evaluateState(s);
     start_calc = get_millis();
