@@ -45,11 +45,11 @@ def js_minimax():
     mp = arg_to_moved(request.args.get('moved'))
     states = arg_to_states(request.args.get('states'))
     turn = int(request.args.get('turn'))
-    time = int(request.args.get('time'))
-    bookish = 8
-    n_moves = max(min(len(states)-bookish, 10), 0)
-    factor = 2 - 0.1 * n_moves if len(states) > bookish else 0.8
-    target = time / max(1, 40-len(states))
+    time = float(request.args.get('time'))
+    bookish = 6
+    n_moves = max(min(len(states)-bookish, 15), 0)
+    factor = 2 - n_moves/15 if len(states) > bookish else 0.5
+    target = (time-500) / max(1, 40-len(states))
     time = int(target * factor)
     res = ai.minimax_ai(b, mp, states, turn, time)
     return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
