@@ -46,16 +46,11 @@ def js_minimax():
     states = arg_to_states(request.args.get('states'))
     turn = int(request.args.get('turn'))
     time = int(request.args.get('time'))
-    time = int(time/max(15.0, 20.0-len(states)/2.0))
-    time = int(time*2)
-    if len(states) <= 4:
-        time = min(time, 4500)
-    elif len(states) <= 6:
-        time = min(time, 6000)
-    if 6 < len(states) < 20:
-        time = int(time*1.5)
-    elif 20 <= len(states) <= 46:
-        time = int(time*2)
+    bookish = 8
+    n_moves = max(min(len(states)-bookish, 10), 0)
+    factor = 2 - 0.1 * n_moves if len(states) > bookish else 0.8
+    target = time / max(1, 40-len(states))
+    time = int(target * factor)
     res = ai.minimax_ai(b, mp, states, turn, time)
     return jsonify({"start": res[0], "end": res[1], "promotion": res[2]})
 

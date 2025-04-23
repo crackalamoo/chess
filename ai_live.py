@@ -2,8 +2,8 @@ import chess_core as chess
 
 T_PLY = 4 # number of ply to analyze
  
-def minimax_ai(b, mp, states, turn, time=7500):
-    return chess.minimax(states, b, mp, turn, 2, time, True)
+def minimax_ai(b, mp, states, turn, time):
+    return chess.minimax(states, b, mp, turn, 3, time, True)
 
 def pgn_to_move(pgn, b, mp, turn):
     # possible move formats:

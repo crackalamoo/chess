@@ -663,7 +663,6 @@ struct MoveRoot {
         square start;
         square end;
         int depth;
-        int trueDepth;
         int material;
         unordered_map<string, int> tp_table;
 };
@@ -703,7 +702,7 @@ string stateToString(GameState state, int turn=0) {
     return s;
 }
 
-int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDepth, int alpha, int beta, int timeLimit) {
+int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int alpha, int beta, int timeLimit) {
     if (root->tp_table.find(stateToString(state, turn)) != root->tp_table.end()) {
         return root->tp_table[stateToString(state, turn)];
     }
@@ -720,60 +719,67 @@ int alphaBeta(GameState state, int depth, int turn, MoveRoot* root, int trueDept
     }
     vector<vector<int> > moves = validMoves(state, turn);
     int value = -100000;
-    int bottomDepth = -8;
     for (int i = 0; i < moves.size(); i++) {
-        GameState newState = afterVecMove(state, moves.at(i));
-        int nextDepth = depth-1;
         int timeElapsed = get_millis()-start_calc;
-        int extraPoints = 0;
-        //bool threefold = (num_reps_extra(states, statesSize, newState, state) >= 3);
-        //bool threefold = false;
-        if (trueDepth >= bottomDepth) {
-            int movingPiece = state.board[moves.at(i).at(0)][moves.at(i).at(1)] - (6*(turn==-1));
-            int capturePiece = state.board[moves.at(i).at(2)][moves.at(i).at(3)];
-            int curr_material = turn*evaluateMaterial(newState);
-            bool capture = (PIECE_SIDE[capturePiece] == turn*-1);
-            if (capture && trueDepth == root->depth)
-                extraPoints += (curr_material > 0)*(12 - movingPiece*2);
-            /* bool check = false;
-            if (trueDepth > 0) {
-                check = inCheck(newState, turn*-1);
-                if (check)
-                    extraPoints += 20;
-            } */
-            if (capture && timeElapsed < timeLimit) {
-                nextDepth = max(nextDepth, 1);
-            }
-        }
-        int curr_val;
-        curr_val = -alphaBeta(newState, nextDepth, -1*turn, root, trueDepth-1, -1*beta, -1*alpha, timeLimit);
-        curr_val += extraPoints;
+        GameState newState = afterVecMove(state, moves.at(i));
+        int curr_val = -alphaBeta(newState, depth-1, -1*turn, root, -1*beta, -1*alpha, timeLimit);
         if (curr_val > value) {
             value = curr_val;
-            if (trueDepth == root->depth) {
+            if (depth == root->depth) {
                 root->start[0] = moves.at(i).at(0);
                 root->start[1] = moves.at(i).at(1);
                 root->end[0] = moves.at(i).at(2);
                 root->end[1] = moves.at(i).at(3);
-                /* cout << "best move: d" << trueDepth << " "
-                << moves.at(i).at(0) << moves.at(i).at(1) << "->" << moves.at(i).at(2) << moves.at(i).at(3)
-                << " v=" << value << " v0=" << evaluateState(newState) << endl; */
+                // cout << "best move: d" << trueDepth << " "
+                // << moves.at(i).at(0) << moves.at(i).at(1) << "->" << moves.at(i).at(2) << moves.at(i).at(3)
+                // << " v=" << value << " v0=" << evaluateState(newState) << endl;
             }
         }
         alpha = max(alpha, value);
-        // if (alpha >= beta || timeElapsed >= timeLimit) {
-        if (alpha >= beta) {
-            if (trueDepth == root->depth && timeElapsed >= timeLimit)
-                cout << "Out of time" << endl;
+        if (alpha >= beta || timeElapsed >= timeLimit) {
             break;
         }
     }
-    root->trueDepth = min(root->trueDepth, trueDepth);
-    if (trueDepth == root->depth)
+    if (depth == root->depth)
         cout << "Anticipated value: " << value << endl;
     root->tp_table[stateToString(state, turn)] = value;
     return value;
+}
 
+void iterativeDeepening(GameState state, int turn, MoveRoot* bestRoot, int timeLimit) {
+    int depth = 1;
+    cout << "Iterative deepening time limit: " << timeLimit << endl;
+    while (true) {
+        MoveRoot* root = new MoveRoot();
+        root->depth = depth;
+        root->material = evaluateMaterial(state);
+        root->tp_table = unordered_map<string, int>();
+        int timeElapsed = get_millis() - start_calc;
+        if (timeElapsed >= timeLimit && depth > 1) {
+            // cout << "Out of time" << endl;
+            break;
+        }
+        
+        int value = alphaBeta(state, depth, turn, root, -100000, 100000, timeLimit);
+        cout << "Depth: " << depth << " Value: " << value << " Elapsed: " << (get_millis() - start_calc) << endl;
+        if (get_millis() - start_calc >= timeLimit) {
+            // cout << "Out of time" << endl;
+            break;
+        }
+        
+        // Update best root with the current root's move
+        bestRoot->start[0] = root->start[0];
+        bestRoot->start[1] = root->start[1];
+        bestRoot->end[0] = root->end[0];
+        bestRoot->end[1] = root->end[1];
+        bestRoot->depth = depth;
+        
+        delete root;
+        
+        if (value >= 20000 || get_millis() - start_calc >= timeLimit || depth >= 4)
+            break;
+        depth++;
+    }
 }
 
 // bitboard reimplementation
@@ -889,13 +895,13 @@ extern "C" int minimax(GameState s, int turn, int depth, bool moreEndgameDepth=t
     if (moreEndgameDepth && endgameState(s))
         searchDepth += 1;
     root->depth = searchDepth;
-    root->trueDepth = searchDepth;
     root->material = evaluateMaterial(s);
     root->tp_table = unordered_map<string, int>();
     cout << "current evaluation: " << evaluateState(s) << endl;
     int score0 = evaluateState(s);
     start_calc = get_millis();
-    alphaBeta(s, searchDepth, turn, root, searchDepth, -100000, 100000, calc_time);
+    // alphaBeta(s, searchDepth, turn, root, -100000, 100000, calc_time);
+    iterativeDeepening(s, turn, root, calc_time);
     int res = 50000+root->start[0]*1000+root->start[1]*100+root->end[0]*10+root->end[1];
     delete root;
     return res;
